@@ -174,3 +174,51 @@ exports.listMyAttendance = async (req, res) => {
     return res.status(500).json({ message: "Internal server error." });
   }
 };
+
+exports.listTopAttendance = async (req, res) => {
+  const { classId } = req.params;
+  const teacherUserId = req.user?.userId;
+
+  if (!classId) {
+    return res.status(400).json({ message: "Missing required fields." });
+  }
+
+  if (!teacherUserId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const teacherId = await getTeacherId(teacherUserId);
+    if (!teacherId) {
+      return res.status(403).json({ message: "Teacher profile not found." });
+    }
+
+    const classRes = await db.query(
+      "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
+      [classId, teacherId]
+    );
+
+    if (classRes.rowCount === 0) {
+      return res.status(403).json({ message: "Class not found for teacher." });
+    }
+
+    const result = await db.query(
+      "SELECT s.id, s.name, s.roll_no, " +
+        "COUNT(a.id) AS total_sessions, " +
+        "SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) AS present_sessions, " +
+        "ROUND(100.0 * SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) / NULLIF(COUNT(a.id), 0), 1) AS attendance_rate " +
+        "FROM attendance a " +
+        "JOIN students s ON s.id = a.student_id " +
+        "WHERE a.class_id = $1 " +
+        "GROUP BY s.id, s.name, s.roll_no " +
+        "ORDER BY attendance_rate DESC, s.roll_no ASC " +
+        "LIMIT 5",
+      [classId]
+    );
+
+    return res.json({ students: result.rows });
+  } catch (error) {
+    console.error("List top attendance error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};

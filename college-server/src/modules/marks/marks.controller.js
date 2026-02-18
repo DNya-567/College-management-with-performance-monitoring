@@ -16,11 +16,19 @@ const getStudentId = async (userId) => {
   return result.rowCount ? result.rows[0].id : null;
 };
 
+const getDepartmentId = async (userId) => {
+  const result = await db.query(
+    "SELECT department_id FROM teachers WHERE user_id = $1",
+    [userId]
+  );
+  return result.rowCount ? result.rows[0].department_id : null;
+};
+
 exports.createMark = async (req, res) => {
-  const { student_id, subject_id, score, exam_type, year } = req.body;
+  const { student_id, subject_id, score, total_marks, exam_type, year } = req.body;
   const teacherUserId = req.user?.userId;
 
-  if (!student_id || !subject_id || score === undefined || !exam_type || !year) {
+  if (!student_id || !subject_id || score === undefined || total_marks === undefined || !exam_type || !year) {
     return res.status(400).json({ message: "Missing required fields." });
   }
 
@@ -40,8 +48,8 @@ exports.createMark = async (req, res) => {
 
     const teacherId = teacherRes.rows[0].id;
     const result = await db.query(
-      "INSERT INTO marks (student_id, subject_id, teacher_id, score, exam_type, year) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, student_id, subject_id, teacher_id, score, exam_type, year",
-      [student_id, subject_id, teacherId, score, exam_type, year]
+      "INSERT INTO marks (student_id, subject_id, teacher_id, score, total_marks, exam_type, year) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, student_id, subject_id, teacher_id, score, total_marks, exam_type, year",
+      [student_id, subject_id, teacherId, score, total_marks, exam_type, year]
     );
 
     return res.status(201).json({ mark: result.rows[0] });
@@ -51,10 +59,31 @@ exports.createMark = async (req, res) => {
   }
 };
 
-exports.listMarks = async (_req, res) => {
+exports.listMarks = async (req, res) => {
+  const role = String(req.user?.role || "").toLowerCase();
+  const userId = req.user?.userId;
+
   try {
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(userId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+
+      const result = await db.query(
+        "SELECT m.id, m.student_id, m.subject_id, m.score, m.total_marks, m.exam_type, m.year " +
+          "FROM marks m " +
+          "JOIN teachers t ON t.id = m.teacher_id " +
+          "WHERE t.department_id = $1 " +
+          "ORDER BY m.year DESC",
+        [departmentId]
+      );
+
+      return res.json({ marks: result.rows });
+    }
+
     const result = await db.query(
-      "SELECT id, student_id, subject_id, score, exam_type, year FROM marks ORDER BY year DESC"
+      "SELECT id, student_id, subject_id, score, total_marks, exam_type, year FROM marks ORDER BY year DESC"
     );
 
     return res.json({ marks: result.rows });
@@ -69,7 +98,7 @@ exports.getMarkById = async (req, res) => {
 
   try {
     const result = await db.query(
-      "SELECT id, student_id, subject_id, score, exam_type, year FROM marks WHERE id = $1",
+      "SELECT id, student_id, subject_id, score, total_marks, exam_type, year FROM marks WHERE id = $1",
       [id]
     );
 
@@ -84,8 +113,32 @@ exports.getMarkById = async (req, res) => {
   }
 };
 
-exports.getSubjectDifficulty = async (_req, res) => {
+exports.getSubjectDifficulty = async (req, res) => {
+  const role = String(req.user?.role || "").toLowerCase();
+  const userId = req.user?.userId;
+
   try {
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(userId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+
+      const result = await db.query(
+        "SELECT s.id AS subject_id, s.name AS subject_name, AVG(m.score) AS avg_score " +
+          "FROM marks m " +
+          "JOIN subjects s ON s.id = m.subject_id " +
+          "JOIN teachers t ON t.id = m.teacher_id " +
+          "WHERE t.department_id = $1 " +
+          "GROUP BY s.id, s.name " +
+          "ORDER BY avg_score ASC " +
+          "LIMIT 5",
+        [departmentId]
+      );
+
+      return res.json({ subjects: result.rows });
+    }
+
     const result = await db.query(
       "SELECT s.id AS subject_id, s.name AS subject_name, AVG(m.score) AS avg_score " +
         "FROM marks m JOIN subjects s ON s.id = m.subject_id " +
@@ -109,14 +162,19 @@ exports.listMyMarks = async (req, res) => {
   }
 
   try {
+    const studentId = await getStudentId(userId);
+    if (!studentId) {
+      return res.status(403).json({ message: "Student profile not found." });
+    }
+
     const result = await db.query(
-      "SELECT m.id, s.name AS subject_name, t.name AS teacher_name, m.score, m.exam_type, m.year " +
+      "SELECT m.id, s.name AS subject_name, t.name AS teacher_name, m.score, m.total_marks, m.exam_type, m.year " +
         "FROM marks m " +
         "JOIN subjects s ON s.id = m.subject_id " +
         "JOIN teachers t ON t.id = m.teacher_id " +
         "WHERE m.student_id = $1 " +
         "ORDER BY m.year DESC",
-      [userId]
+      [studentId]
     );
 
     return res.json({ marks: result.rows });
@@ -126,12 +184,54 @@ exports.listMyMarks = async (req, res) => {
   }
 };
 
-exports.createClassMark = async (req, res) => {
-  const { classId } = req.params;
-  const { student_id, subject_id, score, exam_type, year } = req.body;
+exports.updateMark = async (req, res) => {
+  const { id } = req.params;
+  const { score, total_marks } = req.body;
   const teacherUserId = req.user?.userId;
 
-  if (!classId || !student_id || !subject_id || score === undefined || !exam_type || !year) {
+  if (!id || score === undefined) {
+    return res.status(400).json({ message: "Missing required fields." });
+  }
+
+  if (!teacherUserId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const teacherId = await getTeacherId(teacherUserId);
+    if (!teacherId) {
+      return res.status(403).json({ message: "Teacher profile not found." });
+    }
+
+    let result = await db.query(
+      "UPDATE marks SET score = $1, total_marks = COALESCE($2, total_marks) WHERE id = $3 AND teacher_id = $4 RETURNING id, student_id, subject_id, teacher_id, score, total_marks, exam_type, year",
+      [score, total_marks ?? null, id, teacherId]
+    );
+
+    if (result.rowCount === 0) {
+      result = await db.query(
+        "UPDATE marks m SET score = $1, total_marks = COALESCE($2, m.total_marks) FROM classes c WHERE m.id = $3 AND m.class_id = c.id AND c.teacher_id = $4 RETURNING m.id, m.student_id, m.subject_id, m.teacher_id, m.score, m.total_marks, m.exam_type, m.year",
+        [score, total_marks ?? null, id, teacherId]
+      );
+    }
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Mark not found." });
+    }
+
+    return res.json({ mark: result.rows[0] });
+  } catch (error) {
+    console.error("Update mark error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.createClassMark = async (req, res) => {
+  const { classId } = req.params;
+  const { student_id, subject_id, score, total_marks, exam_type, year } = req.body;
+  const teacherUserId = req.user?.userId;
+
+  if (!classId || !student_id || !subject_id || score === undefined || total_marks === undefined || !exam_type || !year) {
     return res.status(400).json({ message: "Missing required fields." });
   }
 
@@ -168,8 +268,8 @@ exports.createClassMark = async (req, res) => {
     }
 
     const result = await db.query(
-      "INSERT INTO marks (class_id, student_id, subject_id, teacher_id, score, exam_type, year) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, class_id, student_id, subject_id, teacher_id, score, exam_type, year",
-      [classId, student_id, subject_id, teacherId, score, exam_type, year]
+      "INSERT INTO marks (class_id, student_id, subject_id, teacher_id, score, total_marks, exam_type, year) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, class_id, student_id, subject_id, teacher_id, score, total_marks, exam_type, year",
+      [classId, student_id, subject_id, teacherId, score, total_marks, exam_type, year]
     );
 
     return res.status(201).json({ mark: result.rows[0] });
@@ -203,7 +303,7 @@ exports.listMarksByClass = async (req, res) => {
     }
 
     const result = await db.query(
-      "SELECT m.id, s.id AS student_id, s.name AS student_name, s.roll_no, sub.name AS subject_name, m.score, m.exam_type, m.year " +
+      "SELECT m.id, s.id AS student_id, s.name AS student_name, s.roll_no, sub.name AS subject_name, m.score, m.total_marks, m.exam_type, m.year " +
         "FROM marks m " +
         "JOIN students s ON s.id = m.student_id " +
         "JOIN subjects sub ON sub.id = m.subject_id " +
@@ -243,7 +343,7 @@ exports.listMyMarksByClass = async (req, res) => {
     }
 
     const result = await db.query(
-      "SELECT m.id, s.name AS subject_name, t.name AS teacher_name, m.score, m.exam_type, m.year " +
+      "SELECT m.id, s.name AS subject_name, t.name AS teacher_name, m.score, m.total_marks, m.exam_type, m.year " +
         "FROM marks m " +
         "JOIN subjects s ON s.id = m.subject_id " +
         "JOIN teachers t ON t.id = m.teacher_id " +

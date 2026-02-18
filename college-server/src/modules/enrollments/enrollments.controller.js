@@ -16,6 +16,14 @@ const getStudentId = async (userId) => {
   return result.rowCount ? result.rows[0].id : null;
 };
 
+const getDepartmentId = async (userId) => {
+  const result = await db.query(
+    "SELECT department_id FROM teachers WHERE user_id = $1",
+    [userId]
+  );
+  return result.rowCount ? result.rows[0].department_id : null;
+};
+
 exports.requestEnrollment = async (req, res) => {
   const { classId } = req.params;
   const studentUserId = req.user?.userId;
@@ -52,14 +60,35 @@ exports.requestEnrollment = async (req, res) => {
 };
 
 exports.listEnrollmentRequests = async (req, res) => {
-  const teacherUserId = req.user?.userId;
+  const userId = req.user?.userId;
+  const role = String(req.user?.role || "").toLowerCase();
 
-  if (!teacherUserId) {
+  if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
-    const teacherId = await getTeacherId(teacherUserId);
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(userId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+
+      const result = await db.query(
+        "SELECT ce.id, ce.class_id, ce.student_id, ce.status, c.name AS class_name, s.name AS student_name, s.roll_no " +
+          "FROM class_enrollments ce " +
+          "JOIN classes c ON c.id = ce.class_id " +
+          "JOIN students s ON s.id = ce.student_id " +
+          "JOIN teachers t ON t.id = c.teacher_id " +
+          "WHERE t.department_id = $1 AND ce.status = 'pending' " +
+          "ORDER BY ce.id DESC",
+        [departmentId]
+      );
+
+      return res.json({ requests: result.rows });
+    }
+
+    const teacherId = await getTeacherId(userId);
     if (!teacherId) {
       return res.status(403).json({ message: "Teacher profile not found." });
     }
@@ -83,14 +112,38 @@ exports.listEnrollmentRequests = async (req, res) => {
 
 exports.approveEnrollment = async (req, res) => {
   const { id } = req.params;
-  const teacherUserId = req.user?.userId;
+  const userId = req.user?.userId;
+  const role = String(req.user?.role || "").toLowerCase();
 
-  if (!teacherUserId) {
+  if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
-    const teacherId = await getTeacherId(teacherUserId);
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(userId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+
+      const result = await db.query(
+        "UPDATE class_enrollments ce SET status = 'approved' " +
+          "WHERE ce.id = $1 AND ce.status = 'pending' " +
+          "AND ce.class_id IN (" +
+          "  SELECT c.id FROM classes c JOIN teachers t ON t.id = c.teacher_id WHERE t.department_id = $2" +
+          ") " +
+          "RETURNING ce.id, ce.class_id, ce.student_id, ce.status",
+        [id, departmentId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ message: "Enrollment not found." });
+      }
+
+      return res.json({ enrollment: result.rows[0] });
+    }
+
+    const teacherId = await getTeacherId(userId);
     if (!teacherId) {
       return res.status(403).json({ message: "Teacher profile not found." });
     }
@@ -116,14 +169,38 @@ exports.approveEnrollment = async (req, res) => {
 
 exports.rejectEnrollment = async (req, res) => {
   const { id } = req.params;
-  const teacherUserId = req.user?.userId;
+  const userId = req.user?.userId;
+  const role = String(req.user?.role || "").toLowerCase();
 
-  if (!teacherUserId) {
+  if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
-    const teacherId = await getTeacherId(teacherUserId);
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(userId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+
+      const result = await db.query(
+        "UPDATE class_enrollments ce SET status = 'rejected' " +
+          "WHERE ce.id = $1 AND ce.status = 'pending' " +
+          "AND ce.class_id IN (" +
+          "  SELECT c.id FROM classes c JOIN teachers t ON t.id = c.teacher_id WHERE t.department_id = $2" +
+          ") " +
+          "RETURNING ce.id, ce.class_id, ce.student_id, ce.status",
+        [id, departmentId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ message: "Enrollment not found." });
+      }
+
+      return res.json({ enrollment: result.rows[0] });
+    }
+
+    const teacherId = await getTeacherId(userId);
     if (!teacherId) {
       return res.status(403).json({ message: "Teacher profile not found." });
     }
@@ -174,6 +251,37 @@ exports.listMyClasses = async (req, res) => {
     return res.json({ classes: result.rows });
   } catch (error) {
     console.error("List my classes error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.listMyPendingClasses = async (req, res) => {
+  const studentUserId = req.user?.userId;
+
+  if (!studentUserId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const studentId = await getStudentId(studentUserId);
+    if (!studentId) {
+      return res.status(403).json({ message: "Student profile not found." });
+    }
+
+    const result = await db.query(
+      "SELECT c.id AS class_id, c.name AS class_name, c.year, s.name AS subject_name, t.name AS teacher_name, ce.status " +
+        "FROM class_enrollments ce " +
+        "JOIN classes c ON c.id = ce.class_id " +
+        "JOIN subjects s ON s.id = c.subject_id " +
+        "JOIN teachers t ON t.id = c.teacher_id " +
+        "WHERE ce.student_id = $1 AND ce.status = 'pending' " +
+        "ORDER BY c.year DESC",
+      [studentId]
+    );
+
+    return res.json({ classes: result.rows });
+  } catch (error) {
+    console.error("List my pending classes error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };

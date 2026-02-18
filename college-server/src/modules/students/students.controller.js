@@ -22,8 +22,36 @@ exports.createStudent = async (req, res) => {
   }
 };
 
-exports.listStudents = async (_req, res) => {
+exports.listStudents = async (req, res) => {
+  const role = String(req.user?.role || "").toLowerCase();
+  const userId = req.user?.userId;
+
   try {
+    if (role === "hod") {
+      const departmentResult = await db.query(
+        "SELECT department_id FROM teachers WHERE user_id = $1",
+        [userId]
+      );
+
+      if (departmentResult.rowCount === 0) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+
+      const departmentId = departmentResult.rows[0].department_id;
+
+      const result = await db.query(
+        "SELECT s.id, s.name, s.roll_no " +
+          "FROM students s " +
+          "JOIN classes c ON c.id = s.class_id " +
+          "JOIN teachers t ON t.id = c.teacher_id " +
+          "WHERE t.department_id = $1 " +
+          "ORDER BY s.name ASC",
+        [departmentId]
+      );
+
+      return res.json({ students: result.rows });
+    }
+
     const result = await db.query(
       "SELECT id, name, roll_no FROM students ORDER BY name ASC"
     );
