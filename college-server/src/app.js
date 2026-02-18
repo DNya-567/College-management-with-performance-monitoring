@@ -10,6 +10,7 @@ const attendanceRoutes = require("./modules/attendance/attendance.routes");
 const subjectsRoutes = require("./modules/subjects/subjects.routes");
 const teachersRoutes = require("./modules/teachers/teachers.routes");
 const studentsRoutes = require("./modules/students/students.routes");
+const announcementsRoutes = require("./modules/announcements/announcements.routes");
 
 const app = express();
 
@@ -44,4 +45,5 @@ app.use("/api", attendanceRoutes);
 app.use("/api/subjects", subjectsRoutes);
 app.use("/api/teachers", teachersRoutes);
 app.use("/api/students", studentsRoutes);
+app.use("/api/announcements", announcementsRoutes);
 module.exports = app;

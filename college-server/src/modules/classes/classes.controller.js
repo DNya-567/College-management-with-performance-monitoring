@@ -16,6 +16,14 @@ const getStudentId = async (userId) => {
   return result.rowCount ? result.rows[0].id : null;
 };
 
+const getDepartmentId = async (userId) => {
+  const result = await db.query(
+    "SELECT department_id FROM teachers WHERE user_id = $1",
+    [userId]
+  );
+  return result.rowCount ? result.rows[0].department_id : null;
+};
+
 exports.createClass = async (req, res) => {
   const { name, subject_id, year } = req.body;
   const teacherUserId = req.user?.userId;
@@ -106,25 +114,42 @@ exports.listAvailableClasses = async (req, res) => {
 
 exports.listApprovedStudents = async (req, res) => {
   const { classId } = req.params;
-  const teacherUserId = req.user?.userId;
+  const userId = req.user?.userId;
+  const role = String(req.user?.role || "").toLowerCase();
 
-  if (!classId || !teacherUserId) {
+  if (!classId || !userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
-    const teacherId = await getTeacherId(teacherUserId);
-    if (!teacherId) {
-      return res.status(403).json({ message: "Teacher profile not found." });
-    }
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(userId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
 
-    const classRes = await db.query(
-      "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
-      [classId, teacherId]
-    );
+      const classRes = await db.query(
+        "SELECT c.id FROM classes c JOIN teachers t ON t.id = c.teacher_id WHERE c.id = $1 AND t.department_id = $2",
+        [classId, departmentId]
+      );
 
-    if (classRes.rowCount === 0) {
-      return res.status(403).json({ message: "Class not found for teacher." });
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not found for department." });
+      }
+    } else {
+      const teacherId = await getTeacherId(userId);
+      if (!teacherId) {
+        return res.status(403).json({ message: "Teacher profile not found." });
+      }
+
+      const classRes = await db.query(
+        "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
+        [classId, teacherId]
+      );
+
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not found for teacher." });
+      }
     }
 
     const result = await db.query(
@@ -139,6 +164,36 @@ exports.listApprovedStudents = async (req, res) => {
     return res.json({ students: result.rows });
   } catch (error) {
     console.error("List approved students error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.listDepartmentClasses = async (req, res) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const departmentId = await getDepartmentId(userId);
+    if (!departmentId) {
+      return res.status(403).json({ message: "HOD profile not found." });
+    }
+
+    const result = await db.query(
+      "SELECT c.id, c.name, c.year, s.name AS subject_name, t.name AS teacher_name " +
+        "FROM classes c " +
+        "JOIN subjects s ON s.id = c.subject_id " +
+        "JOIN teachers t ON t.id = c.teacher_id " +
+        "WHERE t.department_id = $1 " +
+        "ORDER BY c.year DESC, c.name ASC",
+      [departmentId]
+    );
+
+    return res.json({ classes: result.rows });
+  } catch (error) {
+    console.error("List department classes error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };

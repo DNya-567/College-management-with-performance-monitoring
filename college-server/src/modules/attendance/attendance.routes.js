@@ -5,6 +5,7 @@ const {
   createAttendance,
   listAttendanceByDate,
   listMyAttendance,
+  listTopAttendance,
 } = require("./attendance.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
@@ -26,6 +27,12 @@ router.get(
   authMiddleware,
   requireRole(["student"]),
   listMyAttendance
+);
+router.get(
+  "/classes/:classId/attendance/top",
+  authMiddleware,
+  requireRole(["teacher"]),
+  listTopAttendance
 );
 
 module.exports = router;

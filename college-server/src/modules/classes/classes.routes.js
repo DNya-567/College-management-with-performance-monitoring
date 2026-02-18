@@ -6,6 +6,7 @@ const {
   listMyClasses,
   listAvailableClasses,
   listApprovedStudents,
+  listDepartmentClasses,
 } = require("./classes.controller");
 const {
   requestEnrollment,
@@ -38,9 +39,15 @@ router.post(
   requestEnrollment
 );
 router.get(
+  "/department",
+  authMiddleware,
+  requireRole(["hod"]),
+  listDepartmentClasses
+);
+router.get(
   "/:classId/students",
   authMiddleware,
-  requireRole(["teacher"]),
+  requireRole(["teacher", "hod"]),
   listApprovedStudents
 );
 

@@ -9,6 +9,7 @@ const {
   createClassMark,
   listMarksByClass,
   listMyMarksByClass,
+  updateMark,
 } = require("./marks.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
@@ -55,6 +56,12 @@ router.get(
   authMiddleware,
   requireRole(["admin", "hod", "teacher", "student"]),
   getMarkById
+);
+router.put(
+  "/marks/:id",
+  authMiddleware,
+  requireRole(["teacher"]),
+  updateMark
 );
 
 module.exports = router;
