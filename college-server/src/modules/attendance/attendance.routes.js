@@ -6,6 +6,9 @@ const {
   listAttendanceByDate,
   listMyAttendance,
   listTopAttendance,
+  markAttendance,
+  listMyAttendanceRange,
+  listStudentAttendanceForClass,
 } = require("./attendance.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
@@ -33,6 +36,24 @@ router.get(
   authMiddleware,
   requireRole(["teacher"]),
   listTopAttendance
+);
+router.get(
+  "/classes/:classId/attendance/student/:studentId",
+  authMiddleware,
+  requireRole(["teacher"]),
+  listStudentAttendanceForClass
+);
+router.post(
+  "/attendance",
+  authMiddleware,
+  requireRole(["teacher", "admin"]),
+  markAttendance
+);
+router.get(
+  "/attendance/me",
+  authMiddleware,
+  requireRole(["student"]),
+  listMyAttendanceRange
 );
 
 module.exports = router;

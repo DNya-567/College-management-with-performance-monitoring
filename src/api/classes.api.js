@@ -7,3 +7,5 @@ export const createClass = (payload) => http.post("/classes", payload);
 
 export const listApprovedStudents = (classId) =>
   http.get(`/classes/${classId}/students`);
+
+export const listDepartmentClasses = () => http.get("/classes/department");

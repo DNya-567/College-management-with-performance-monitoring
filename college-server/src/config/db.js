@@ -7,6 +7,9 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD || "dnyanesh",
   database: process.env.DB_NAME || "college_db",
   ssl: false, // local dev
+  max: 10,                // max pool size — prevents unbounded connections
+  idleTimeoutMillis: 30000, // close idle clients after 30s
+  connectionTimeoutMillis: 5000, // fail fast if DB unreachable
 });
 
 pool.on("connect", () => {
