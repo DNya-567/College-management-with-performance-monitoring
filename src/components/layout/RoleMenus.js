@@ -20,6 +20,7 @@ export const roleMenus = {
   teacher: [
     { label: "Dashboard", path: "/teacher", icon: LayoutDashboard },
     { label: "Profile", path: "/teacher/profile", icon: User },
+    { label: "Announcements", path: "/teacher/announcements", icon: Inbox },
     { label: "Enter Marks", path: "/teacher/marks", icon: ClipboardList },
     { label: "My Classes", path: "/teacher/classes", icon: BookOpen },
     { label: "Enrollment Requests", path: "/teacher/requests", icon: Inbox },
@@ -28,10 +29,10 @@ export const roleMenus = {
   student: [
     { label: "Dashboard", path: "/student", icon: LayoutDashboard },
     { label: "Profile", path: "/student/profile", icon: User },
-    { label: "My Marks", path: "/student/marks", icon: GraduationCap },
+    { label: "Announcements", path: "/student/announcements", icon: Inbox },
+    { label: "View Marks", path: "/student/marks", icon: GraduationCap },
     { label: "Join Classes", path: "/student/join", icon: PlusCircle },
     { label: "My Classes", path: "/student/classes", icon: BookOpen },
-    { label: "My Attendance", path: "/student/attendance", icon: CalendarCheck },
   ],
   hod: [
     { label: "Dashboard", path: "/hod", icon: LayoutDashboard },

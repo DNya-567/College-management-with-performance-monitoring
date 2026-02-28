@@ -3,51 +3,55 @@
 import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { http } from "../../api/http";
+import { useTeacherClasses } from "../../hooks/useTeacherClasses";
+import { usePageAnimation } from "../../hooks/usePageAnimation";
 
 export default function TeacherMarks() {
+  const { scopeRef } = usePageAnimation();
   const [form, setForm] = useState({
     class_id: "",
     subject_id: "",
     exam_type: "internal",
     year: new Date().getFullYear(),
   });
-  const [classes, setClasses] = useState([]);
+  const { classes } = useTeacherClasses();
   const [students, setStudents] = useState([]);
   const [scores, setScores] = useState({});
+  const [totals, setTotals] = useState({});
+  const [classMarks, setClassMarks] = useState([]);
+  const [editingStudentId, setEditingStudentId] = useState(null);
   const [optionsError, setOptionsError] = useState("");
   const [status, setStatus] = useState("");
 
-  const sortedStudents = useMemo(() => {
-    return [...students].sort((a, b) =>
-      String(a.roll_no || "").localeCompare(String(b.roll_no || ""), undefined, {
-        numeric: true,
-        sensitivity: "base",
-      })
+  const currentMarksByStudent = useMemo(() => {
+    const filtered = classMarks.filter(
+      (mark) =>
+        mark.exam_type === form.exam_type &&
+        Number(mark.year) === Number(form.year)
     );
-  }, [students]);
+    const map = {};
+    filtered.forEach((mark) => {
+      map[mark.student_id] = mark;
+    });
+    return map;
+  }, [classMarks, form.exam_type, form.year]);
 
-  useEffect(() => {
-    let isMounted = true;
+  const existingScores = useMemo(() => {
+    const map = {};
+    Object.values(currentMarksByStudent).forEach((mark) => {
+      map[mark.student_id] = mark.score;
+    });
+    return map;
+  }, [currentMarksByStudent]);
 
-    const loadClasses = async () => {
-      try {
-        const response = await http.get("/classes/mine");
-        if (isMounted) setClasses(response.data?.classes || []);
-      } catch (err) {
-        if (isMounted) {
-          setOptionsError(
-            err.response?.data?.message || "Failed to load classes."
-          );
-        }
-      }
-    };
+  const existingTotals = useMemo(() => {
+    const map = {};
+    Object.values(currentMarksByStudent).forEach((mark) => {
+      map[mark.student_id] = mark.total_marks;
+    });
+    return map;
+  }, [currentMarksByStudent]);
 
-    void loadClasses();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const handleClassChange = async (event) => {
     const classId = event.target.value;
@@ -58,18 +62,41 @@ export default function TeacherMarks() {
     }));
     setStudents([]);
     setScores({});
+    setTotals({});
+    setClassMarks([]);
+    setEditingStudentId(null);
     setOptionsError("");
 
     if (!classId) return;
 
     try {
-      const response = await http.get(`/classes/${classId}/students`);
-      setStudents(response.data?.students || []);
+      const [studentsRes, marksRes] = await Promise.all([
+        http.get(`/classes/${classId}/students`),
+        http.get(`/classes/${classId}/marks`),
+      ]);
+      const nextStudents = studentsRes.data?.students || [];
+      const nextMarks = marksRes.data?.marks || [];
+      setStudents(nextStudents);
+      setClassMarks(nextMarks);
     } catch (err) {
       setOptionsError(
         err.response?.data?.message || "Failed to load approved students."
       );
     }
+  };
+
+  const handleExamTypeChange = (event) => {
+    setForm((prev) => ({ ...prev, exam_type: event.target.value }));
+    setScores({});
+    setTotals({});
+    setEditingStudentId(null);
+  };
+
+  const handleYearChange = (event) => {
+    setForm((prev) => ({ ...prev, year: event.target.value }));
+    setScores({});
+    setTotals({});
+    setEditingStudentId(null);
   };
 
   const submit = async (e) => {
@@ -84,15 +111,33 @@ export default function TeacherMarks() {
     }
 
     const rowsToSubmit = sortedStudents
+      .filter((student) => !currentMarksByStudent[student.id])
       .map((student) => ({
         student_id: student.id,
         score: scores[student.id],
+        total_marks: totals[student.id],
       }))
-      .filter((row) => row.score !== undefined && row.score !== "");
+      .filter(
+        (row) =>
+          row.score !== undefined &&
+          row.score !== "" &&
+          row.total_marks !== undefined &&
+          row.total_marks !== ""
+      );
 
     if (rowsToSubmit.length === 0) {
       setStatus("");
       setOptionsError("Enter marks for at least one student.");
+      return;
+    }
+
+    // Validate score does not exceed total marks
+    const invalidRow = rowsToSubmit.find(
+      (row) => Number(row.score) > Number(row.total_marks)
+    );
+    if (invalidRow) {
+      setStatus("");
+      setOptionsError("Score cannot exceed total marks for any student.");
       return;
     }
 
@@ -103,6 +148,7 @@ export default function TeacherMarks() {
             student_id: row.student_id,
             subject_id: form.subject_id,
             score: Number(row.score),
+            total_marks: Number(row.total_marks),
             exam_type: form.exam_type,
             year: Number(form.year),
           })
@@ -110,23 +156,67 @@ export default function TeacherMarks() {
       );
       setStatus("Saved successfully");
       setScores({});
+      setTotals({});
+      const updatedMarks = await http.get(`/classes/${form.class_id}/marks`);
+      setClassMarks(updatedMarks.data?.marks || []);
     } catch (err) {
       setStatus("");
       setOptionsError(err.response?.data?.message || "Error saving marks");
     }
   };
 
+  const handleEdit = (studentId) => {
+    setEditingStudentId(studentId);
+  };
+
+  const handleUpdate = async (studentId) => {
+    const existing = currentMarksByStudent[studentId];
+    if (!existing) return;
+
+    const nextScore = scores[studentId] ?? existingScores[studentId];
+    const nextTotal = totals[studentId] ?? existingTotals[studentId];
+
+    if (Number(nextScore) > Number(nextTotal)) {
+      setOptionsError("Score cannot exceed total marks.");
+      return;
+    }
+
+    try {
+      await http.put(`/marks/${existing.id}`, {
+        score: Number(nextScore),
+        total_marks: Number(nextTotal),
+      });
+      const updatedMarks = await http.get(`/classes/${form.class_id}/marks`);
+      setClassMarks(updatedMarks.data?.marks || []);
+      setEditingStudentId(null);
+      setStatus("Updated successfully");
+    } catch (err) {
+      setOptionsError(err.response?.data?.message || "Error updating marks");
+    }
+  };
+
+  const sortedStudents = useMemo(
+    () =>
+      [...students].sort((a, b) =>
+        String(a.roll_no || "").localeCompare(String(b.roll_no || ""), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        })
+      ),
+    [students]
+  );
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
+      <div ref={scopeRef} className="space-y-6">
+        <div className="anim-item">
           <h1 className="text-2xl font-semibold text-slate-900">Enter Marks</h1>
           <p className="mt-1 text-sm text-slate-500">
             Select a class and enter marks for each student.
           </p>
         </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="anim-item rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <form className="space-y-6" onSubmit={submit}>
             <div className="grid gap-4 lg:grid-cols-3">
               <div className="space-y-2">
@@ -155,9 +245,7 @@ export default function TeacherMarks() {
                   id="examType"
                   className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
                   value={form.exam_type}
-                  onChange={(e) =>
-                    setForm({ ...form, exam_type: e.target.value })
-                  }
+                  onChange={handleExamTypeChange}
                   disabled={!form.class_id}
                 >
                   <option value="internal">Internal</option>
@@ -174,7 +262,7 @@ export default function TeacherMarks() {
                   type="number"
                   className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
                   value={form.year}
-                  onChange={(e) => setForm({ ...form, year: e.target.value })}
+                  onChange={handleYearChange}
                   disabled={!form.class_id}
                 />
               </div>
@@ -193,38 +281,94 @@ export default function TeacherMarks() {
                       <th className="px-3 py-2 font-medium">Name</th>
                       <th className="px-3 py-2 font-medium">Roll No</th>
                       <th className="px-3 py-2 font-medium">Enter Marks</th>
+                      <th className="px-3 py-2 font-medium">Total Marks</th>
+                      <th className="px-3 py-2 font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedStudents.map((student, index) => (
-                      <tr
-                        key={student.id}
-                        className="border-b border-slate-100"
-                      >
-                        <td className="px-3 py-3 text-slate-500">
-                          {index + 1}
-                        </td>
-                        <td className="px-3 py-3 font-medium text-slate-900">
-                          {student.name}
-                        </td>
-                        <td className="px-3 py-3 text-slate-600">
-                          {student.roll_no}
-                        </td>
-                        <td className="px-3 py-3">
-                          <input
-                            type="number"
-                            className="w-28 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                            value={scores[student.id] ?? ""}
-                            onChange={(e) =>
-                              setScores((prev) => ({
-                                ...prev,
-                                [student.id]: e.target.value,
-                              }))
-                            }
-                          />
-                        </td>
-                      </tr>
-                    ))}
+                    {sortedStudents.map((student, index) => {
+                      const existing = currentMarksByStudent[student.id];
+                      const isEditing = editingStudentId === student.id;
+                      return (
+                        <tr key={student.id} className="border-b border-slate-100">
+                          <td className="px-3 py-3 text-slate-500">
+                            {index + 1}
+                          </td>
+                          <td className="px-3 py-3 font-medium text-slate-900">
+                            {student.name}
+                          </td>
+                          <td className="px-3 py-3 text-slate-600">
+                            {student.roll_no}
+                          </td>
+                          <td className="px-3 py-3">
+                            <input
+                              type="number"
+                              min="0"
+                              max={totals[student.id] ?? existingTotals[student.id] ?? ""}
+                              className="w-28 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                              value={scores[student.id] ?? existingScores[student.id] ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const maxVal = Number(totals[student.id] ?? existingTotals[student.id]);
+                                if (val !== "" && maxVal && Number(val) > maxVal) return;
+                                setScores((prev) => ({
+                                  ...prev,
+                                  [student.id]: val,
+                                }));
+                              }}
+                              disabled={Boolean(existing) && !isEditing}
+                            />
+                          </td>
+                          <td className="px-3 py-3">
+                            <input
+                              type="number"
+                              min="1"
+                              className="w-28 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                              value={totals[student.id] ?? existingTotals[student.id] ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setTotals((prev) => ({
+                                  ...prev,
+                                  [student.id]: val,
+                                }));
+                                // If score already entered and exceeds new total, cap it
+                                const currentScore = Number(scores[student.id] ?? existingScores[student.id] ?? 0);
+                                if (val !== "" && currentScore > Number(val)) {
+                                  setScores((prev) => ({
+                                    ...prev,
+                                    [student.id]: val,
+                                  }));
+                                }
+                              }}
+                              disabled={Boolean(existing) && !isEditing}
+                            />
+                          </td>
+                          <td className="px-3 py-3">
+                            {existing ? (
+                              isEditing ? (
+                                <button
+                                  type="button"
+                                  className="rounded-full bg-[#0052FF] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-600"
+                                  onClick={() => handleUpdate(student.id)}
+                                >
+                                  Update
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                                  onClick={() => handleEdit(student.id)}
+                                >
+                                  Edit
+                                </button>
+                              )
+                            ) : (
+                              <span className="text-xs text-slate-400">New</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

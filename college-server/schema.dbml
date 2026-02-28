@@ -1,0 +1,140 @@
+// College Management System – Database Schema
+// Use https://dbdiagram.io to visualize this file
+// Docs: https://dbml.dbdiagram.io/docs
+
+// ──────────────────────────────────────────────
+// EXTENSIONS
+// ──────────────────────────────────────────────
+// pgcrypto — gen_random_uuid() for UUID generation
+
+// ──────────────────────────────────────────────
+// CORE TABLES
+// ──────────────────────────────────────────────
+
+Table users {
+  id UUID [pk, default: `gen_random_uuid()`]
+  email VARCHAR [unique, not null]
+  password_hash TEXT [not null]
+  role VARCHAR [not null, note: "CHECK (role IN ('admin', 'teacher', 'student', 'hod'))"]
+  created_at TIMESTAMP [default: `now()`]
+}
+
+Table teachers {
+  id UUID [pk, default: `gen_random_uuid()`]
+  name TEXT [not null]
+  department_id UUID [ref: > departments.id]
+  user_id UUID [unique, not null, ref: - users.id]
+}
+
+Table students {
+  id UUID [pk, default: `gen_random_uuid()`]
+  roll_no VARCHAR [not null]
+  name TEXT [not null]
+  class_id UUID [ref: > classes.id]
+  year INTEGER [not null]
+  user_id UUID [unique, not null, ref: - users.id]
+  created_at TIMESTAMP [default: `now()`]
+}
+
+Table departments {
+  id UUID [pk, default: `gen_random_uuid()`]
+  name TEXT [not null, unique]
+  hod_id UUID [ref: > teachers.id, note: "HOD of the department"]
+}
+
+// ──────────────────────────────────────────────
+// ACADEMIC STRUCTURE
+// ──────────────────────────────────────────────
+
+Table subjects {
+  id UUID [pk, default: `gen_random_uuid()`]
+  name TEXT [not null]
+  class_id UUID [ref: > classes.id, note: "Legacy / optional FK"]
+  teacher_id UUID [ref: > teachers.id, note: "Legacy / optional FK"]
+}
+
+Table classes {
+  id UUID [pk, default: `gen_random_uuid()`]
+  name TEXT [not null]
+  subject_id UUID [not null, ref: > subjects.id]
+  teacher_id UUID [not null, ref: > teachers.id]
+  year INTEGER [not null, note: "1 = First Year, 2 = Second Year, etc."]
+}
+
+// ──────────────────────────────────────────────
+// ENROLLMENT
+// ──────────────────────────────────────────────
+
+Table class_enrollments {
+  id UUID [pk, default: `gen_random_uuid()`]
+  class_id UUID [not null, ref: > classes.id]
+  student_id UUID [not null, ref: > students.id]
+  status VARCHAR [not null, note: "CHECK (status IN ('pending', 'approved', 'rejected'))"]
+
+  indexes {
+    (class_id, status)
+    (student_id, status)
+  }
+}
+
+// ──────────────────────────────────────────────
+// MARKS
+// ──────────────────────────────────────────────
+
+Table marks {
+  id SERIAL [pk]
+  class_id UUID [ref: > classes.id, note: "Added via migration"]
+  student_id UUID [not null, ref: > students.id]
+  subject_id UUID [not null, ref: > subjects.id]
+  teacher_id UUID [not null, ref: > teachers.id]
+  score INTEGER [not null]
+  total_marks INTEGER [note: "Max marks for the exam"]
+  exam_type VARCHAR [not null, note: "'internal', 'midterm', 'final', etc."]
+  year INTEGER [not null]
+
+  indexes {
+    student_id
+    class_id
+    exam_type
+  }
+}
+
+// ──────────────────────────────────────────────
+// ATTENDANCE
+// ──────────────────────────────────────────────
+
+Table attendance {
+  id SERIAL [pk]
+  class_id UUID [not null, ref: > classes.id]
+  student_id UUID [not null, ref: > students.id]
+  date DATE [not null]
+  status TEXT [not null, note: "CHECK (status IN ('present', 'absent'))"]
+
+  indexes {
+    class_id
+    (class_id, date)
+    student_id
+    (class_id, student_id, date) [unique]
+  }
+}
+
+// ──────────────────────────────────────────────
+// ANNOUNCEMENTS
+// ──────────────────────────────────────────────
+
+Table announcements {
+  id UUID [pk, default: `gen_random_uuid()`]
+  teacher_id UUID [not null, ref: > teachers.id]
+  class_id UUID [ref: > classes.id, note: "Scoped to a specific class"]
+  title TEXT [not null]
+  body TEXT [not null]
+  created_at TIMESTAMP [not null, default: `now()`]
+
+  indexes {
+    teacher_id
+    class_id
+    created_at
+  }
+}
+
+

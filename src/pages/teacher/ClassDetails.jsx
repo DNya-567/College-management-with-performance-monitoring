@@ -3,11 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import { listApprovedStudents, listMyClasses } from "../../api/classes.api";
+import { listApprovedStudents } from "../../api/classes.api";
+import { useTeacherClasses } from "../../hooks/useTeacherClasses";
+import { usePageAnimation } from "../../hooks/usePageAnimation";
 
 const ClassDetails = () => {
   const { classId } = useParams();
-  const [classes, setClasses] = useState([]);
+  const { classes } = useTeacherClasses();
+  const { scopeRef } = usePageAnimation();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -20,15 +23,10 @@ const ClassDetails = () => {
   useEffect(() => {
     let isMounted = true;
 
-    const loadData = async () => {
+    const loadStudents = async () => {
       try {
-        const [classesRes, studentsRes] = await Promise.all([
-          listMyClasses(),
-          listApprovedStudents(classId),
-        ]);
-
+        const studentsRes = await listApprovedStudents(classId);
         if (isMounted) {
-          setClasses(classesRes.data?.classes || []);
           setStudents(studentsRes.data?.students || []);
         }
       } catch (err) {
@@ -41,7 +39,7 @@ const ClassDetails = () => {
     };
 
     if (classId) {
-      void loadData();
+      void loadStudents();
     }
 
     return () => {
@@ -51,8 +49,8 @@ const ClassDetails = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div ref={scopeRef} className="space-y-6">
+        <div className="anim-item flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-500">Class</p>
             <h1 className="text-2xl font-semibold text-slate-900">
@@ -75,7 +73,7 @@ const ClassDetails = () => {
         )}
 
         {!loading && !error && (
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="anim-item grid gap-6 lg:grid-cols-2">
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-900">Overview</h2>
               <div className="mt-4 space-y-2 text-sm text-slate-600">

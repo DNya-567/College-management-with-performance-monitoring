@@ -11,6 +11,8 @@ const subjectsRoutes = require("./modules/subjects/subjects.routes");
 const teachersRoutes = require("./modules/teachers/teachers.routes");
 const studentsRoutes = require("./modules/students/students.routes");
 const announcementsRoutes = require("./modules/announcements/announcements.routes");
+const { classRouter: announcementsClassRoutes } = require("./modules/announcements/announcements.routes");
+const performanceRoutes = require("./modules/performance/performance.routes");
 
 const app = express();
 
@@ -45,5 +47,7 @@ app.use("/api", attendanceRoutes);
 app.use("/api/subjects", subjectsRoutes);
 app.use("/api/teachers", teachersRoutes);
 app.use("/api/students", studentsRoutes);
-app.use("/api/announcements", announcementsRoutes);
+app.use("/api/announcements", announcementsRoutes);       // GET /api/announcements
+app.use("/api/classes", announcementsClassRoutes);        // GET/POST /api/classes/:classId/announcements
+app.use("/api", performanceRoutes);
 module.exports = app;

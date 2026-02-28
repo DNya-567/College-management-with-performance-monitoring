@@ -1,28 +1,7 @@
 // Marks controller: database CRUD for marks only.
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
-
-const getTeacherId = async (userId) => {
-  const result = await db.query("SELECT id FROM teachers WHERE user_id = $1", [
-    userId,
-  ]);
-  return result.rowCount ? result.rows[0].id : null;
-};
-
-const getStudentId = async (userId) => {
-  const result = await db.query("SELECT id FROM students WHERE user_id = $1", [
-    userId,
-  ]);
-  return result.rowCount ? result.rows[0].id : null;
-};
-
-const getDepartmentId = async (userId) => {
-  const result = await db.query(
-    "SELECT department_id FROM teachers WHERE user_id = $1",
-    [userId]
-  );
-  return result.rowCount ? result.rows[0].department_id : null;
-};
+const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
 
 exports.createMark = async (req, res) => {
   const { student_id, subject_id, score, total_marks, exam_type, year } = req.body;
@@ -30,6 +9,14 @@ exports.createMark = async (req, res) => {
 
   if (!student_id || !subject_id || score === undefined || total_marks === undefined || !exam_type || !year) {
     return res.status(400).json({ message: "Missing required fields." });
+  }
+
+  if (Number(score) < 0 || Number(total_marks) <= 0) {
+    return res.status(400).json({ message: "Score and total marks must be positive numbers." });
+  }
+
+  if (Number(score) > Number(total_marks)) {
+    return res.status(400).json({ message: "Score cannot exceed total marks." });
   }
 
   if (!teacherUserId) {
@@ -193,6 +180,18 @@ exports.updateMark = async (req, res) => {
     return res.status(400).json({ message: "Missing required fields." });
   }
 
+  if (Number(score) < 0) {
+    return res.status(400).json({ message: "Score must be a positive number." });
+  }
+
+  if (total_marks !== undefined && Number(total_marks) <= 0) {
+    return res.status(400).json({ message: "Total marks must be a positive number." });
+  }
+
+  if (total_marks !== undefined && Number(score) > Number(total_marks)) {
+    return res.status(400).json({ message: "Score cannot exceed total marks." });
+  }
+
   if (!teacherUserId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -201,6 +200,14 @@ exports.updateMark = async (req, res) => {
     const teacherId = await getTeacherId(teacherUserId);
     if (!teacherId) {
       return res.status(403).json({ message: "Teacher profile not found." });
+    }
+
+    // If total_marks not provided, check score against existing total_marks in DB
+    if (total_marks === undefined || total_marks === null) {
+      const existing = await db.query("SELECT total_marks FROM marks WHERE id = $1", [id]);
+      if (existing.rowCount > 0 && Number(score) > Number(existing.rows[0].total_marks)) {
+        return res.status(400).json({ message: "Score cannot exceed total marks." });
+      }
     }
 
     let result = await db.query(
@@ -233,6 +240,14 @@ exports.createClassMark = async (req, res) => {
 
   if (!classId || !student_id || !subject_id || score === undefined || total_marks === undefined || !exam_type || !year) {
     return res.status(400).json({ message: "Missing required fields." });
+  }
+
+  if (Number(score) < 0 || Number(total_marks) <= 0) {
+    return res.status(400).json({ message: "Score and total marks must be positive numbers." });
+  }
+
+  if (Number(score) > Number(total_marks)) {
+    return res.status(400).json({ message: "Score cannot exceed total marks." });
   }
 
   if (!teacherUserId) {

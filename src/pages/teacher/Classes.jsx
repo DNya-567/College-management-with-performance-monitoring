@@ -3,38 +3,32 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { listSubjects, createSubject } from "../../api/subjects.api";
-import { listMyClasses, createClass } from "../../api/classes.api";
+import { createClass } from "../../api/classes.api";
+import { useTeacherClasses, invalidateTeacherClasses } from "../../hooks/useTeacherClasses";
 import { Link } from "react-router-dom";
+import { usePageAnimation } from "../../hooks/usePageAnimation";
 
 const TeacherClasses = () => {
   const [form, setForm] = useState({ name: "", subject_name: "", year: "" });
   const [subjects, setSubjects] = useState([]);
-  const [classes, setClasses] = useState([]);
+  const { classes, refetch: refetchClasses } = useTeacherClasses();
+  const { scopeRef } = usePageAnimation();
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadData = async () => {
+    const loadSubjects = async () => {
       try {
-        const [subjectsRes, classesRes] = await Promise.all([
-          listSubjects(),
-          listMyClasses(),
-        ]);
-
-        if (isMounted) {
-          setSubjects(subjectsRes.data?.subjects || []);
-          setClasses(classesRes.data?.classes || []);
-        }
+        const res = await listSubjects();
+        if (isMounted) setSubjects(res.data?.subjects || []);
       } catch (err) {
-        if (isMounted) {
-          setError(err.response?.data?.message || "Failed to load data.");
-        }
+        if (isMounted) setError(err.response?.data?.message || "Failed to load subjects.");
       }
     };
 
-    loadData();
+    loadSubjects();
 
     return () => {
       isMounted = false;
@@ -75,7 +69,8 @@ const TeacherClasses = () => {
         year: Number(form.year),
       });
 
-      setClasses((prev) => [response.data?.class, ...prev].filter(Boolean));
+      invalidateTeacherClasses();
+      refetchClasses();
 
       setForm({ name: "", subject_name: "", year: "" });
       setStatus("Class created.");
@@ -87,8 +82,8 @@ const TeacherClasses = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
+      <div ref={scopeRef} className="space-y-6">
+        <div className="anim-item">
           <h1 className="text-2xl font-semibold text-slate-900">My Classes</h1>
           <p className="mt-1 text-sm text-slate-500">
             Create new classes and manage your existing list.
@@ -96,7 +91,7 @@ const TeacherClasses = () => {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="anim-item rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900">
               Create a class
             </h2>

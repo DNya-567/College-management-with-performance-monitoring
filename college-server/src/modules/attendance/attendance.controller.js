@@ -1,22 +1,14 @@
 // Attendance controller: database logic for attendance only.
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
-
-const getTeacherId = async (userId) => {
-  const result = await db.query("SELECT id FROM teachers WHERE user_id = $1", [
-    userId,
-  ]);
-  return result.rowCount ? result.rows[0].id : null;
-};
-
-const getStudentId = async (userId) => {
-  const result = await db.query("SELECT id FROM students WHERE user_id = $1", [
-    userId,
-  ]);
-  return result.rowCount ? result.rows[0].id : null;
-};
+const { getTeacherId, getStudentId } = require("../../utils/lookups");
 
 const isValidStatus = (status) => status === "present" || status === "absent";
+
+const isSunday = (dateStr) => {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.getDay() === 0;
+};
 
 exports.createAttendance = async (req, res) => {
   const { classId } = req.params;
@@ -25,6 +17,10 @@ exports.createAttendance = async (req, res) => {
 
   if (!classId || !date || !Array.isArray(records) || records.length === 0) {
     return res.status(400).json({ message: "Missing required fields." });
+  }
+
+  if (isSunday(date)) {
+    return res.status(400).json({ message: "Attendance cannot be marked on Sundays." });
   }
 
   if (!teacherUserId) {
@@ -88,6 +84,66 @@ exports.createAttendance = async (req, res) => {
     return res.status(201).json({ message: "Attendance saved." });
   } catch (error) {
     console.error("Create attendance error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.markAttendance = async (req, res) => {
+  const { class_id, student_id, date, status } = req.body;
+  const teacherUserId = req.user?.userId;
+
+  if (!class_id || !student_id || !date || !status) {
+    return res
+      .status(400)
+      .json({ message: "class_id, student_id, date, and status are required." });
+  }
+
+  if (isSunday(date)) {
+    return res.status(400).json({ message: "Attendance cannot be marked on Sundays." });
+  }
+
+  if (!isValidStatus(status)) {
+    return res.status(400).json({ message: "Invalid status value." });
+  }
+
+  if (!teacherUserId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const teacherId = await getTeacherId(teacherUserId);
+    if (!teacherId) {
+      return res.status(403).json({ message: "Teacher profile not found." });
+    }
+
+    const classRes = await db.query(
+      "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
+      [class_id, teacherId]
+    );
+
+    if (classRes.rowCount === 0) {
+      return res.status(403).json({ message: "Class not found for teacher." });
+    }
+
+    const enrollmentRes = await db.query(
+      "SELECT id FROM class_enrollments WHERE class_id = $1 AND student_id = $2 AND status = 'approved'",
+      [class_id, student_id]
+    );
+
+    if (enrollmentRes.rowCount === 0) {
+      return res
+        .status(403)
+        .json({ message: "Student not approved for this class." });
+    }
+
+    const result = await db.query(
+      "INSERT INTO attendance (class_id, student_id, date, status) VALUES ($1, $2, $3, $4) RETURNING id, class_id, student_id, date, status",
+      [class_id, student_id, date, status]
+    );
+
+    return res.status(201).json({ attendance: result.rows[0] });
+  } catch (error) {
+    console.error("Mark attendance error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -171,6 +227,88 @@ exports.listMyAttendance = async (req, res) => {
     return res.json({ attendance: result.rows });
   } catch (error) {
     console.error("List my attendance error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.listMyAttendanceRange = async (req, res) => {
+  const studentUserId = req.user?.userId;
+  const { from, to } = req.query;
+
+  if (!studentUserId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const studentId = await getStudentId(studentUserId);
+    if (!studentId) {
+      return res.status(403).json({ message: "Student profile not found." });
+    }
+
+    const params = [studentId];
+    let whereClause = "WHERE student_id = $1";
+
+    if (from) {
+      params.push(from);
+      whereClause += ` AND date >= $${params.length}`;
+    }
+
+    if (to) {
+      params.push(to);
+      whereClause += ` AND date <= $${params.length}`;
+    }
+
+    const result = await db.query(
+      `SELECT id, class_id, date, status
+       FROM attendance
+       ${whereClause}
+       ORDER BY date DESC`,
+      params
+    );
+
+    return res.json({ attendance: result.rows });
+  } catch (error) {
+    console.error("List my attendance range error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// Teacher: get all attendance records for a specific student in a class the teacher owns.
+exports.listStudentAttendanceForClass = async (req, res) => {
+  const { classId, studentId } = req.params;
+  const teacherUserId = req.user?.userId;
+
+  if (!classId || !studentId) {
+    return res.status(400).json({ message: "Missing classId or studentId." });
+  }
+
+  if (!teacherUserId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const teacherId = await getTeacherId(teacherUserId);
+    if (!teacherId) {
+      return res.status(403).json({ message: "Teacher profile not found." });
+    }
+
+    const classRes = await db.query(
+      "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
+      [classId, teacherId]
+    );
+
+    if (classRes.rowCount === 0) {
+      return res.status(403).json({ message: "Class not found for teacher." });
+    }
+
+    const result = await db.query(
+      "SELECT id, date, status FROM attendance WHERE class_id = $1 AND student_id = $2 ORDER BY date DESC",
+      [classId, studentId]
+    );
+
+    return res.json({ attendance: result.rows });
+  } catch (error) {
+    console.error("List student attendance error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };

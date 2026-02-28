@@ -19,6 +19,8 @@ import MyAttendance from "../pages/student/MyAttendance";
 import TeacherProfile from "../pages/teacher/Profile";
 import StudentProfile from "../pages/student/Profile";
 import ClassDetails from "../pages/teacher/ClassDetails";
+import TeacherAnnouncements from "../pages/teacher/Announcements";
+import StudentAnnouncements from "../pages/student/Announcements";
 
 const AppRoutes = () => (
   <Routes>
@@ -143,6 +145,22 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute allowedRoles={["teacher"]}>
           <ClassDetails />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/teacher/announcements"
+      element={
+        <ProtectedRoute allowedRoles={["teacher"]}>
+          <TeacherAnnouncements />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/student/announcements"
+      element={
+        <ProtectedRoute allowedRoles={["student"]}>
+          <StudentAnnouncements />
         </ProtectedRoute>
       }
     />
