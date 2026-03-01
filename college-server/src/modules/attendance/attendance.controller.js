@@ -1,7 +1,7 @@
 // Attendance controller: database logic for attendance only.
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
-const { getTeacherId, getStudentId } = require("../../utils/lookups");
+const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
 
 const isValidStatus = (status) => status === "present" || status === "absent";
 
@@ -309,6 +309,69 @@ exports.listStudentAttendanceForClass = async (req, res) => {
     return res.json({ attendance: result.rows });
   } catch (error) {
     console.error("List student attendance error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// Returns per-student attendance summary (total, present, absent, rate) for a class.
+exports.getAttendanceSummary = async (req, res) => {
+  const { classId } = req.params;
+  const teacherUserId = req.user?.userId;
+  const role = String(req.user?.role || "").toLowerCase();
+
+  if (!classId) {
+    return res.status(400).json({ message: "Missing classId." });
+  }
+
+  if (!teacherUserId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(teacherUserId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+      const classRes = await db.query(
+        "SELECT c.id FROM classes c JOIN teachers t ON t.id = c.teacher_id WHERE c.id = $1 AND t.department_id = $2",
+        [classId, departmentId]
+      );
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not in your department." });
+      }
+    } else {
+      const teacherId = await getTeacherId(teacherUserId);
+      if (!teacherId) {
+        return res.status(403).json({ message: "Teacher profile not found." });
+      }
+      const classRes = await db.query(
+        "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
+        [classId, teacherId]
+      );
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not found for teacher." });
+      }
+    }
+
+    const result = await db.query(
+      "SELECT s.id AS student_id, s.name, s.roll_no, " +
+        "COUNT(a.id) AS total_sessions, " +
+        "SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) AS present_count, " +
+        "SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) AS absent_count, " +
+        "ROUND(100.0 * SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) / NULLIF(COUNT(a.id), 0), 1) AS attendance_rate " +
+        "FROM class_enrollments ce " +
+        "JOIN students s ON s.id = ce.student_id " +
+        "LEFT JOIN attendance a ON a.class_id = ce.class_id AND a.student_id = ce.student_id " +
+        "WHERE ce.class_id = $1 AND ce.status = 'approved' " +
+        "GROUP BY s.id, s.name, s.roll_no " +
+        "ORDER BY s.roll_no ASC",
+      [classId]
+    );
+
+    return res.json({ summary: result.rows });
+  } catch (error) {
+    console.error("Attendance summary error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };

@@ -23,7 +23,7 @@ router.post(
 router.get(
   "/classes/:classId/marks",
   authMiddleware,
-  requireRole(["teacher"]),
+  requireRole(["teacher", "hod"]),
   listMarksByClass
 );
 router.get(

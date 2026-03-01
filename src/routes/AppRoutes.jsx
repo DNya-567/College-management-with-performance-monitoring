@@ -21,6 +21,11 @@ import StudentProfile from "../pages/student/Profile";
 import ClassDetails from "../pages/teacher/ClassDetails";
 import TeacherAnnouncements from "../pages/teacher/Announcements";
 import StudentAnnouncements from "../pages/student/Announcements";
+import HodDepartmentClasses from "../pages/hod/DepartmentClasses";
+import HodClassDetails from "../pages/hod/ClassDetails";
+import HodEnrollmentRequests from "../pages/hod/EnrollmentRequests";
+import HodAnnouncements from "../pages/hod/Announcements";
+import HodPerformance from "../pages/hod/Performance";
 
 const AppRoutes = () => (
   <Routes>
@@ -73,6 +78,54 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute allowedRoles={["hod"]}>
           <HodDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/hod/classes"
+      element={
+        <ProtectedRoute allowedRoles={["hod"]}>
+          <HodDepartmentClasses />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/hod/classes/:classId"
+      element={
+        <ProtectedRoute allowedRoles={["hod"]}>
+          <HodClassDetails />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/hod/requests"
+      element={
+        <ProtectedRoute allowedRoles={["hod"]}>
+          <HodEnrollmentRequests />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/hod/announcements"
+      element={
+        <ProtectedRoute allowedRoles={["hod"]}>
+          <HodAnnouncements />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/hod/performance"
+      element={
+        <ProtectedRoute allowedRoles={["hod"]}>
+          <HodPerformance />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/hod/profile"
+      element={
+        <ProtectedRoute allowedRoles={["hod"]}>
+          <TeacherProfile />
         </ProtectedRoute>
       }
     />

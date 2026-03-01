@@ -12,3 +12,7 @@ export const fetchMyTrend = () => http.get("/performance/me/trend");
 export const fetchClassPerformance = (classId) =>
   http.get(`/performance/class/${classId}`);
 
+/** HOD: fetch department-wide per-class performance overview */
+export const fetchDepartmentPerformance = () =>
+  http.get("/performance/department");
+

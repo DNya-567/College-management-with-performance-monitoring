@@ -147,6 +147,40 @@ exports.listApprovedStudents = async (req, res) => {
   }
 };
 
+exports.getDepartmentStats = async (req, res) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const departmentId = await getDepartmentId(userId);
+    if (!departmentId) {
+      return res.status(403).json({ message: "HOD profile not found." });
+    }
+
+    const result = await db.query(
+      `SELECT
+        (SELECT COUNT(*) FROM classes c JOIN teachers t ON t.id = c.teacher_id WHERE t.department_id = $1) AS total_classes,
+        (SELECT COUNT(DISTINCT t.id) FROM teachers t WHERE t.department_id = $1) AS total_teachers,
+        (SELECT COUNT(DISTINCT ce.student_id) FROM class_enrollments ce JOIN classes c ON c.id = ce.class_id JOIN teachers t ON t.id = c.teacher_id WHERE t.department_id = $1 AND ce.status = 'approved') AS total_students,
+        (SELECT COUNT(*) FROM class_enrollments ce JOIN classes c ON c.id = ce.class_id JOIN teachers t ON t.id = c.teacher_id WHERE t.department_id = $1 AND ce.status = 'pending') AS pending_requests`,
+      [departmentId]
+    );
+
+    return res.json({
+      total_classes: Number(result.rows[0]?.total_classes ?? 0),
+      total_teachers: Number(result.rows[0]?.total_teachers ?? 0),
+      total_students: Number(result.rows[0]?.total_students ?? 0),
+      pending_requests: Number(result.rows[0]?.pending_requests ?? 0),
+    });
+  } catch (error) {
+    console.error("Department stats error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
 exports.listDepartmentClasses = async (req, res) => {
   const userId = req.user?.userId;
 
