@@ -9,3 +9,6 @@ export const listApprovedStudents = (classId) =>
   http.get(`/classes/${classId}/students`);
 
 export const listDepartmentClasses = () => http.get("/classes/department");
+
+export const fetchDepartmentStats = () => http.get("/classes/department/stats");
+

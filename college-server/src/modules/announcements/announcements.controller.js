@@ -2,16 +2,18 @@
 // Announcements are always tied to a specific class.
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
-const { getTeacherId, getStudentId } = require("../../utils/lookups");
+const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
 
 /**
  * POST /api/classes/:classId/announcements
- * Teacher creates an announcement scoped to a class they own.
+ * Teacher creates an announcement for a class they own.
+ * HOD creates an announcement for any class in their department.
  */
 exports.createAnnouncement = async (req, res) => {
   const { classId } = req.params;
   const { title, body } = req.body;
   const teacherUserId = req.user?.userId;
+  const role = String(req.user?.role || "").toLowerCase();
 
   if (!classId || !title || !body) {
     return res.status(400).json({ message: "Class, title, and body are required." });
@@ -27,13 +29,27 @@ exports.createAnnouncement = async (req, res) => {
       return res.status(403).json({ message: "Teacher profile not found." });
     }
 
-    // Verify teacher owns this class
-    const classRes = await db.query(
-      "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
-      [classId, teacherId]
-    );
-    if (classRes.rowCount === 0) {
-      return res.status(403).json({ message: "Class not found for teacher." });
+    // Authorization: teacher must own the class, HOD must be in same department
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(teacherUserId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+      const classRes = await db.query(
+        "SELECT c.id FROM classes c JOIN teachers t ON t.id = c.teacher_id WHERE c.id = $1 AND t.department_id = $2",
+        [classId, departmentId]
+      );
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not in your department." });
+      }
+    } else {
+      const classRes = await db.query(
+        "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
+        [classId, teacherId]
+      );
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not found for teacher." });
+      }
     }
 
     const result = await db.query(
@@ -64,8 +80,20 @@ exports.listClassAnnouncements = async (req, res) => {
   }
 
   try {
-    // Authorization: teacher must own the class, student must be approved
-    if (role === "teacher" || role === "hod") {
+    // Authorization: teacher must own the class, HOD must be in same department, student must be approved
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(userId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+      const classRes = await db.query(
+        "SELECT c.id FROM classes c JOIN teachers t ON t.id = c.teacher_id WHERE c.id = $1 AND t.department_id = $2",
+        [classId, departmentId]
+      );
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not in your department." });
+      }
+    } else if (role === "teacher") {
       const teacherId = await getTeacherId(userId);
       if (!teacherId) {
         return res.status(403).json({ message: "Teacher profile not found." });
@@ -126,7 +154,21 @@ exports.listMyAnnouncements = async (req, res) => {
   try {
     let result;
 
-    if (role === "teacher" || role === "hod") {
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(userId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+      result = await db.query(
+        "SELECT a.id, a.title, a.body, a.created_at, a.class_id, t.name AS teacher_name, c.name AS class_name " +
+          "FROM announcements a " +
+          "JOIN teachers t ON t.id = a.teacher_id " +
+          "JOIN classes c ON c.id = a.class_id " +
+          "WHERE t.department_id = $1 " +
+          "ORDER BY a.created_at DESC",
+        [departmentId]
+      );
+    } else if (role === "teacher") {
       const teacherId = await getTeacherId(userId);
       if (!teacherId) {
         return res.status(403).json({ message: "Teacher profile not found." });

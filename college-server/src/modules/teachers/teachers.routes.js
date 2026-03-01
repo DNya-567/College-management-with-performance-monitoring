@@ -5,7 +5,7 @@ const { getMyProfile } = require("./teachers.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
 
-router.get("/me", authMiddleware, requireRole(["teacher"]), getMyProfile);
+router.get("/me", authMiddleware, requireRole(["teacher", "hod"]), getMyProfile);
 
 module.exports = router;
 

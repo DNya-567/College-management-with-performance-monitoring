@@ -10,6 +10,8 @@ import {
   User,
   GraduationCap,
   PlusCircle,
+  BarChart3,
+  Users,
 } from "lucide-react";
 
 export const roleMenus = {
@@ -36,6 +38,10 @@ export const roleMenus = {
   ],
   hod: [
     { label: "Dashboard", path: "/hod", icon: LayoutDashboard },
-    { label: "Marks", path: "/hod/marks", icon: Shield },
+    { label: "Dept Classes", path: "/hod/classes", icon: BookOpen },
+    { label: "Enrollment Requests", path: "/hod/requests", icon: Users },
+    { label: "Announcements", path: "/hod/announcements", icon: Inbox },
+    { label: "Performance", path: "/hod/performance", icon: BarChart3 },
+    { label: "Profile", path: "/hod/profile", icon: User },
   ],
 };

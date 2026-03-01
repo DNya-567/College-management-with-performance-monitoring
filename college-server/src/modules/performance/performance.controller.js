@@ -2,7 +2,7 @@
 // Must NOT define routes or implement auth logic.
 // Must NOT read Authorization headers — uses req.user set by auth middleware.
 const db = require("../../config/db");
-const { getStudentId, getTeacherId } = require("../../utils/lookups");
+const { getStudentId, getTeacherId, getDepartmentId } = require("../../utils/lookups");
 
 /**
  * GET /api/performance/me
@@ -140,24 +140,38 @@ exports.getMyPerformance = async (req, res) => {
 exports.getClassPerformance = async (req, res) => {
   const { classId } = req.params;
   const userId = req.user?.userId;
+  const role = String(req.user?.role || "").toLowerCase();
 
   if (!classId || !userId) {
     return res.status(400).json({ message: "Missing required fields." });
   }
 
   try {
-    const teacherId = await getTeacherId(userId);
-    if (!teacherId) {
-      return res.status(403).json({ message: "Teacher profile not found." });
-    }
-
-    // Verify teacher owns this class
-    const classRes = await db.query(
-      "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
-      [classId, teacherId]
-    );
-    if (classRes.rowCount === 0) {
-      return res.status(403).json({ message: "Class not found for teacher." });
+    // Authorization: teacher must own the class, HOD must be in same department
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(userId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+      const classRes = await db.query(
+        "SELECT c.id FROM classes c JOIN teachers t ON t.id = c.teacher_id WHERE c.id = $1 AND t.department_id = $2",
+        [classId, departmentId]
+      );
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not in your department." });
+      }
+    } else {
+      const teacherId = await getTeacherId(userId);
+      if (!teacherId) {
+        return res.status(403).json({ message: "Teacher profile not found." });
+      }
+      const classRes = await db.query(
+        "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
+        [classId, teacherId]
+      );
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not found for teacher." });
+      }
     }
 
     // All approved students in this class with marks + attendance
@@ -242,6 +256,66 @@ exports.getMyTrend = async (req, res) => {
     return res.json({ trend });
   } catch (error) {
     console.error("Get my trend error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+/**
+ * GET /api/performance/department
+ * Returns per-class performance overview for the HOD's department.
+ * Each class: { class_id, class_name, teacher_name, year, avg_score, attendance_pct, student_count }
+ */
+exports.getDepartmentPerformance = async (req, res) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const departmentId = await getDepartmentId(userId);
+    if (!departmentId) {
+      return res.status(403).json({ message: "HOD profile not found." });
+    }
+
+    const result = await db.query(
+      `SELECT
+         c.id AS class_id,
+         c.name AS class_name,
+         t.name AS teacher_name,
+         sub.name AS subject_name,
+         c.year,
+         (SELECT COUNT(*) FROM class_enrollments ce WHERE ce.class_id = c.id AND ce.status = 'approved') AS student_count,
+         COALESCE(
+           ROUND(100.0 * SUM(m.score) / NULLIF(SUM(m.total_marks), 0), 1), 0
+         ) AS avg_score,
+         COALESCE(att.attendance_pct, 0) AS attendance_pct
+       FROM classes c
+       JOIN teachers t ON t.id = c.teacher_id
+       JOIN subjects sub ON sub.id = c.subject_id
+       LEFT JOIN marks m ON m.class_id = c.id
+       LEFT JOIN LATERAL (
+         SELECT ROUND(
+           100.0 * SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1
+         ) AS attendance_pct
+         FROM attendance a WHERE a.class_id = c.id
+       ) att ON true
+       WHERE t.department_id = $1
+       GROUP BY c.id, c.name, t.name, sub.name, c.year, att.attendance_pct
+       ORDER BY c.year DESC, c.name ASC`,
+      [departmentId]
+    );
+
+    const classes = result.rows.map((row) => ({
+      ...row,
+      avg_score: Math.min(Number(row.avg_score), 100),
+      attendance_pct: Math.min(Number(row.attendance_pct), 100),
+      student_count: Number(row.student_count),
+    }));
+
+    return res.json({ classes });
+  } catch (error) {
+    console.error("Department performance error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };

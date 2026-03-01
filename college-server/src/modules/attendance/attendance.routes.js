@@ -9,6 +9,7 @@ const {
   markAttendance,
   listMyAttendanceRange,
   listStudentAttendanceForClass,
+  getAttendanceSummary,
 } = require("./attendance.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
@@ -30,6 +31,12 @@ router.get(
   authMiddleware,
   requireRole(["student"]),
   listMyAttendance
+);
+router.get(
+  "/classes/:classId/attendance/summary",
+  authMiddleware,
+  requireRole(["teacher", "hod"]),
+  getAttendanceSummary
 );
 router.get(
   "/classes/:classId/attendance/top",

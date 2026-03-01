@@ -5,6 +5,7 @@ const {
   getMyPerformance,
   getClassPerformance,
   getMyTrend,
+  getDepartmentPerformance,
 } = require("./performance.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
@@ -23,6 +24,14 @@ router.get(
   authMiddleware,
   requireRole(["student"]),
   getMyTrend
+);
+
+// HOD: department-wide per-class performance overview
+router.get(
+  "/performance/department",
+  authMiddleware,
+  requireRole(["hod"]),
+  getDepartmentPerformance
 );
 
 // Teacher: class-wide performance table (all students ranked)

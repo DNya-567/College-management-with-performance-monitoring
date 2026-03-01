@@ -297,24 +297,40 @@ exports.createClassMark = async (req, res) => {
 exports.listMarksByClass = async (req, res) => {
   const { classId } = req.params;
   const teacherUserId = req.user?.userId;
+  const role = String(req.user?.role || "").toLowerCase();
 
   if (!classId || !teacherUserId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
-    const teacherId = await getTeacherId(teacherUserId);
-    if (!teacherId) {
-      return res.status(403).json({ message: "Teacher profile not found." });
-    }
+    let teacherId;
 
-    const classRes = await db.query(
-      "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
-      [classId, teacherId]
-    );
-
-    if (classRes.rowCount === 0) {
-      return res.status(403).json({ message: "Class not found for teacher." });
+    if (role === "hod") {
+      const departmentId = await getDepartmentId(teacherUserId);
+      if (!departmentId) {
+        return res.status(403).json({ message: "HOD profile not found." });
+      }
+      const classRes = await db.query(
+        "SELECT c.id, c.teacher_id FROM classes c JOIN teachers t ON t.id = c.teacher_id WHERE c.id = $1 AND t.department_id = $2",
+        [classId, departmentId]
+      );
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not in your department." });
+      }
+      teacherId = classRes.rows[0].teacher_id;
+    } else {
+      teacherId = await getTeacherId(teacherUserId);
+      if (!teacherId) {
+        return res.status(403).json({ message: "Teacher profile not found." });
+      }
+      const classRes = await db.query(
+        "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
+        [classId, teacherId]
+      );
+      if (classRes.rowCount === 0) {
+        return res.status(403).json({ message: "Class not found for teacher." });
+      }
     }
 
     const result = await db.query(
@@ -322,9 +338,9 @@ exports.listMarksByClass = async (req, res) => {
         "FROM marks m " +
         "JOIN students s ON s.id = m.student_id " +
         "JOIN subjects sub ON sub.id = m.subject_id " +
-        "WHERE m.class_id = $1 AND m.teacher_id = $2 " +
+        "WHERE m.class_id = $1 " +
         "ORDER BY m.year DESC",
-      [classId, teacherId]
+      [classId]
     );
 
     return res.json({ marks: result.rows });
