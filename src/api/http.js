@@ -16,23 +16,24 @@ export const http = axios.create({
 
 // Attach JWT token automatically on each request.
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Auto-logout on 401 (expired/invalid token).
+// Auto-logout on 401 (expired/invalid token) or 403 (deactivated account).
 // Clears stale token and redirects to login to prevent silent failures.
 http.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      const path = window.location.pathname;
-      // Don't redirect if already on login or making a login request
-      if (path !== "/login" && !error.config?.url?.includes("/auth/login")) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
+    const status = error.response?.status;
+    const path = window.location.pathname;
+    const isLoginReq = error.config?.url?.includes("/auth/login");
+    const isDeactivated = status === 403 && error.response?.data?.message === "Account is deactivated.";
+
+    if ((status === 401 || isDeactivated) && path !== "/login" && !isLoginReq) {
+      sessionStorage.removeItem("token");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }

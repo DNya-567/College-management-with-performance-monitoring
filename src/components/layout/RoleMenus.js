@@ -3,6 +3,7 @@
 import {
   BookOpen,
   CalendarCheck,
+  CalendarDays,
   ClipboardList,
   Inbox,
   LayoutDashboard,
@@ -22,6 +23,7 @@ export const roleMenus = {
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
     { label: "Manage Users", path: "/admin/users", icon: Users },
     { label: "Departments", path: "/admin/departments", icon: Building2 },
+    { label: "Semesters", path: "/admin/semesters", icon: CalendarDays },
     { label: "Teachers", path: "/admin/teachers", icon: GraduationCap },
     { label: "Students", path: "/admin/students", icon: UserCheck },
     { label: "System Overview", path: "/admin/overview", icon: Eye },

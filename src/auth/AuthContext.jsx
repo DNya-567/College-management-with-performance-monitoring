@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const loadCurrentUser = useCallback(async () => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     if (!token) {
       setAuthState(null);
       setLoading(false);
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
       const token = response?.data?.token || response?.data?.accessToken || null;
 
       if (token) {
-        localStorage.setItem("token", token);
+        sessionStorage.setItem("token", token);
       }
 
       await loadCurrentUser();
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }) => {
   );
 
   const logout = useCallback(() => {
-    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
     setAuthState(null);
   }, [setAuthState]);
 

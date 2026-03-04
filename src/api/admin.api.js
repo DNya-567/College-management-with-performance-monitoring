@@ -40,3 +40,29 @@ export const deleteDepartment = (id) =>
 export const assignHod = (departmentId, teacherId) =>
   http.put(`/admin/departments/${departmentId}/hod`, { teacher_id: teacherId });
 
+// ── User CRUD ──
+
+/** Reset a user's password */
+export const resetUserPassword = (id, password) =>
+  http.put(`/admin/users/${id}/reset-password`, { password });
+
+/** Toggle user active/inactive status */
+export const toggleUserStatus = (id) =>
+  http.put(`/admin/users/${id}/toggle-status`);
+
+/** Permanently delete a user */
+export const deleteUser = (id) =>
+  http.delete(`/admin/users/${id}`);
+
+// ── Teacher CRUD ──
+
+/** Reassign teacher to a different department */
+export const updateTeacherDepartment = (teacherId, departmentId) =>
+  http.put(`/admin/teachers/${teacherId}/department`, { department_id: departmentId });
+
+// ── Audit Logs ──
+
+/** Fetch recent audit logs */
+export const fetchAuditLogs = (limit = 50) =>
+  http.get("/admin/audit-logs", { params: { limit } });
+

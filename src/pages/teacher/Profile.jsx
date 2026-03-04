@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { getMyTeacherProfile } from "../../api/teachers.api";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import ChangePasswordCard from "../../components/ui/ChangePasswordCard";
 import Spinner from "../../components/ui/Spinner";
 
 const TeacherProfile = () => {
@@ -46,20 +47,28 @@ const TeacherProfile = () => {
         {loading && <Spinner />}
         {error && <p className="mt-4 text-sm text-red-600" role="alert">{error}</p>}
         {teacher && !loading && (
-          <div className="anim-item mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="space-y-3 text-sm text-slate-600">
-              <div>
-                <p className="text-xs uppercase text-slate-400">Name</p>
-                <p className="font-medium text-slate-900">{teacher.name}</p>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Profile Info Card */}
+            <div className="anim-item rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="space-y-3 text-sm text-slate-600">
+                <div>
+                  <p className="text-xs uppercase text-slate-400">Name</p>
+                  <p className="font-medium text-slate-900">{teacher.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-slate-400">Email</p>
+                  <p className="font-medium text-slate-900">{teacher.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-slate-400">Department</p>
+                  <p className="font-medium text-slate-900">{teacher.department_name || teacher.department_id || "—"}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs uppercase text-slate-400">Email</p>
-                <p className="font-medium text-slate-900">{teacher.email}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase text-slate-400">Department</p>
-                <p className="font-medium text-slate-900">{teacher.department_id || "-"}</p>
-              </div>
+            </div>
+
+            {/* Change Password Card */}
+            <div className="anim-item">
+              <ChangePasswordCard />
             </div>
           </div>
         )}

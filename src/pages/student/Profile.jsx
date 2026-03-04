@@ -7,6 +7,7 @@ import { getMyStudentProfile } from "../../api/students.api";
 import { useStudentEnrollments } from "../../hooks/useStudentEnrollments";
 import { listMyAttendance } from "../../api/attendance.api";
 import Spinner from "../../components/ui/Spinner";
+import ChangePasswordCard from "../../components/ui/ChangePasswordCard";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
 
 const buildStats = (attendance) => {
@@ -209,6 +210,13 @@ const StudentProfile = () => {
                 </div>
               )}
             </section>
+          </div>
+        )}
+
+        {/* Change Password */}
+        {!loading && student && (
+          <div className="anim-item max-w-md">
+            <ChangePasswordCard />
           </div>
         )}
 

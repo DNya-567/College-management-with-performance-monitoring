@@ -4,18 +4,39 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { fetchDepartmentPerformance, fetchClassPerformance } from "../../api/performance.api";
+import { getMyTeacherProfile } from "../../api/teachers.api";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import { useSemester } from "../../hooks/useSemester";
+import SemesterSelector from "../../components/ui/SemesterSelector";
+import { exportDepartmentPerformance, triggerExcelDownload } from "../../api/exports.api";
+import { FileSpreadsheet } from "lucide-react";
 
 export default function HodPerformance() {
   const { scopeRef } = usePageAnimation();
+  const { semesters, selectedSemesterId, setSelectedSemesterId, loading: semLoading } = useSemester();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [departmentId, setDepartmentId] = useState(null);
+  const [exportingDept, setExportingDept] = useState(false);
 
   // Drill-down state
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [classPerf, setClassPerf] = useState([]);
   const [drillLoading, setDrillLoading] = useState(false);
+
+  // Fetch department ID on mount
+  useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      try {
+        const res = await getMyTeacherProfile();
+        if (isMounted) setDepartmentId(res.data?.teacher?.department_id || null);
+      } catch { /* silent */ }
+    };
+    load();
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -53,12 +74,45 @@ export default function HodPerformance() {
 
   const selectedClass = classes.find((c) => c.class_id === selectedClassId);
 
+  const handleExportDepartment = async () => {
+    if (!departmentId) return;
+    try {
+      setExportingDept(true);
+      const res = await exportDepartmentPerformance(departmentId, selectedSemesterId);
+      triggerExcelDownload(res.data, "Department_Performance.xlsx");
+    } catch {
+      setError("Failed to export department performance.");
+    } finally {
+      setExportingDept(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div ref={scopeRef} className="space-y-6">
-        <div className="anim-item">
-          <h1 className="text-2xl font-semibold text-slate-900">Department Performance</h1>
-          <p className="mt-1 text-sm text-slate-500">Per-class overview. Click a row to see individual students.</p>
+        <div className="anim-item flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Department Performance</h1>
+            <p className="mt-1 text-sm text-slate-500">Per-class overview. Click a row to see individual students.</p>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <SemesterSelector
+              semesters={semesters}
+              selectedId={selectedSemesterId}
+              onChange={setSelectedSemesterId}
+              loading={semLoading}
+            />
+            {departmentId && classes.length > 0 && (
+              <button
+                onClick={handleExportDepartment}
+                disabled={exportingDept}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                {exportingDept ? "Exporting..." : "Export to Excel"}
+              </button>
+            )}
+          </div>
         </div>
 
         {loading && <p className="text-sm text-slate-500">Loading…</p>}

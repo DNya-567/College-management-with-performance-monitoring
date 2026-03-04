@@ -5,6 +5,8 @@ import { useTeacherClasses } from "../../hooks/useTeacherClasses";
 import { listTopAttendance } from "../../api/attendance.api";
 import { fetchClassPerformance } from "../../api/performance.api";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import { useSemester } from "../../hooks/useSemester";
+import SemesterSelector from "../../components/ui/SemesterSelector";
 import Spinner from "../../components/ui/Spinner";
 
 // Teacher Dashboard: landing page for teacher role
@@ -15,6 +17,7 @@ export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { classes } = useTeacherClasses();
   const { scopeRef } = usePageAnimation();
+  const { semesters, selectedSemesterId, setSelectedSemesterId, loading: semLoading } = useSemester();
   const [selectedClassId, setSelectedClassId] = useState("");
   const [topStudents, setTopStudents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -118,11 +121,19 @@ export default function TeacherDashboard() {
   return (
     <DashboardLayout>
       <div ref={scopeRef} className="space-y-6">
-        <div className="anim-item">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Teacher Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">Quick actions</p>
+        <div className="anim-item flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              Teacher Dashboard
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">Quick actions</p>
+          </div>
+          <SemesterSelector
+            semesters={semesters}
+            selectedId={selectedSemesterId}
+            onChange={setSelectedSemesterId}
+            loading={semLoading}
+          />
         </div>
 
         <div className="anim-item flex flex-wrap gap-3">

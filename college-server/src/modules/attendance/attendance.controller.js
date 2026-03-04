@@ -2,6 +2,7 @@
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
 const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
+const { getActiveSemester } = require("../../utils/getActiveSemester");
 
 const isValidStatus = (status) => status === "present" || status === "absent";
 
@@ -64,13 +65,15 @@ exports.createAttendance = async (req, res) => {
     }
 
     const client = await db.connect();
+    const activeSem = await getActiveSemester();
+    const semesterId = activeSem ? activeSem.id : null;
 
     try {
       await client.query("BEGIN");
       for (const record of records) {
         await client.query(
-          "INSERT INTO attendance (class_id, student_id, date, status) VALUES ($1, $2, $3, $4) ON CONFLICT (class_id, student_id, date) DO UPDATE SET status = EXCLUDED.status",
-          [classId, record.student_id, date, record.status]
+          "INSERT INTO attendance (class_id, student_id, date, status, semester_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (class_id, student_id, date) DO UPDATE SET status = EXCLUDED.status, semester_id = COALESCE(EXCLUDED.semester_id, attendance.semester_id)",
+          [classId, record.student_id, date, record.status, semesterId]
         );
       }
       await client.query("COMMIT");
@@ -136,9 +139,12 @@ exports.markAttendance = async (req, res) => {
         .json({ message: "Student not approved for this class." });
     }
 
+    const activeSem = await getActiveSemester();
+    const semesterId = activeSem ? activeSem.id : null;
+
     const result = await db.query(
-      "INSERT INTO attendance (class_id, student_id, date, status) VALUES ($1, $2, $3, $4) RETURNING id, class_id, student_id, date, status",
-      [class_id, student_id, date, status]
+      "INSERT INTO attendance (class_id, student_id, date, status, semester_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, class_id, student_id, date, status, semester_id",
+      [class_id, student_id, date, status, semesterId]
     );
 
     return res.status(201).json({ attendance: result.rows[0] });

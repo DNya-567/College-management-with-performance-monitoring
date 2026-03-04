@@ -16,6 +16,11 @@ const {
   deleteDepartment,
   assignHod,
   getRecentActivity,
+  resetUserPassword,
+  toggleUserStatus,
+  deleteUser,
+  updateTeacherDepartment,
+  getAuditLogs,
 } = require("./admin.controller");
 
 // All admin routes require authentication + admin role
@@ -27,14 +32,21 @@ router.get("/stats", getSystemStats);
 // Recent activity (announcements)
 router.get("/recent-activity", getRecentActivity);
 
-// User management (read-only)
+// Audit logs
+router.get("/audit-logs", getAuditLogs);
+
+// User management
 router.get("/users", listAllUsers);
+router.put("/users/:id/reset-password", resetUserPassword);
+router.put("/users/:id/toggle-status", toggleUserStatus);
+router.delete("/users/:id", deleteUser);
 
 // Class overview (read-only)
 router.get("/classes", listAllClasses);
 
-// Teacher management (read-only)
+// Teacher management
 router.get("/teachers", listAllTeachers);
+router.put("/teachers/:id/department", updateTeacherDepartment);
 
 // Student management (read-only)
 router.get("/students", listAllStudents);

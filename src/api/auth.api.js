@@ -16,3 +16,7 @@ export const registerStudent = (payload) =>
 export const registerHod = (payload) =>
   http.post("/auth/register/hod", payload);
 
+/** Self-service password change (student, teacher, hod only) */
+export const changePassword = (current_password, new_password) =>
+  http.put("/auth/change-password", { current_password, new_password });
+

@@ -2,6 +2,8 @@
 // Only admin-role users should reach these functions (enforced by routes).
 // Must NOT define routes, read Authorization headers, or implement auth logic.
 const db = require("../../config/db");
+const bcrypt = require("bcrypt");
+const { logAudit } = require("../../utils/auditLog");
 
 /**
  * GET /api/admin/stats
@@ -43,6 +45,7 @@ exports.listAllUsers = async (req, res) => {
         u.id,
         u.email,
         u.role,
+        u.is_active,
         u.created_at,
         COALESCE(t.name, s.name) AS name,
         s.roll_no
@@ -369,6 +372,238 @@ exports.getRecentActivity = async (_req, res) => {
     return res.json({ activities: result.rows });
   } catch (error) {
     console.error("Admin recent activity error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// ──────────────────────────────────────────────
+// CRUD Operations
+// ──────────────────────────────────────────────
+
+/**
+ * PUT /api/admin/users/:id/reset-password
+ * Admin resets a user's password. Cannot reset own password here.
+ */
+exports.resetUserPassword = async (req, res) => {
+  const { id } = req.params;
+  const { password } = req.body;
+  const adminId = req.user.userId;
+
+  if (id === adminId) {
+    return res.status(400).json({ message: "Cannot reset your own password through admin panel." });
+  }
+
+  if (!password || password.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters." });
+  }
+
+  try {
+    const userCheck = await db.query("SELECT id, email FROM users WHERE id = $1", [id]);
+    if (userCheck.rowCount === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [hash, id]);
+
+    logAudit(adminId, "reset_password", "user", id, { email: userCheck.rows[0].email });
+
+    return res.json({ message: "Password reset successfully." });
+  } catch (error) {
+    console.error("Admin reset password error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+/**
+ * PUT /api/admin/users/:id/toggle-status
+ * Activate or deactivate a user account. Cannot deactivate self.
+ */
+exports.toggleUserStatus = async (req, res) => {
+  const { id } = req.params;
+  const adminId = req.user.userId;
+
+  if (id === adminId) {
+    return res.status(400).json({ message: "Cannot deactivate your own account." });
+  }
+
+  try {
+    const result = await db.query(
+      "UPDATE users SET is_active = NOT is_active WHERE id = $1 RETURNING id, email, is_active",
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const user = result.rows[0];
+    logAudit(adminId, user.is_active ? "activate_user" : "deactivate_user", "user", id, {
+      email: user.email,
+    });
+
+    return res.json({ message: `User ${user.is_active ? "activated" : "deactivated"}.`, is_active: user.is_active });
+  } catch (error) {
+    console.error("Admin toggle status error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+/**
+ * DELETE /api/admin/users/:id
+ * Permanently deletes a user and all cascading data. Cannot delete self.
+ */
+exports.deleteUser = async (req, res) => {
+  const { id } = req.params;
+  const adminId = req.user.userId;
+
+  if (id === adminId) {
+    return res.status(400).json({ message: "Cannot delete your own account." });
+  }
+
+  try {
+    const userRes = await db.query("SELECT id, email, role FROM users WHERE id = $1", [id]);
+    if (userRes.rowCount === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const user = userRes.rows[0];
+    await db.query("BEGIN");
+
+    if (user.role === "student") {
+      // Get student record
+      const sRes = await db.query("SELECT id FROM students WHERE user_id = $1", [id]);
+      if (sRes.rowCount > 0) {
+        const studentId = sRes.rows[0].id;
+        await db.query("DELETE FROM attendance WHERE student_id = $1", [studentId]);
+        await db.query("DELETE FROM marks WHERE student_id = $1", [studentId]);
+        await db.query("DELETE FROM class_enrollments WHERE student_id = $1", [studentId]);
+        await db.query("DELETE FROM students WHERE id = $1", [studentId]);
+      }
+    }
+
+    if (user.role === "teacher" || user.role === "hod") {
+      const tRes = await db.query("SELECT id FROM teachers WHERE user_id = $1", [id]);
+      if (tRes.rowCount > 0) {
+        const teacherId = tRes.rows[0].id;
+        // Clear HOD references
+        await db.query("UPDATE departments SET hod_id = NULL WHERE hod_id = $1", [teacherId]);
+        // Delete announcements by this teacher
+        await db.query("DELETE FROM announcements WHERE teacher_id = $1", [teacherId]);
+        // Delete marks entered by this teacher
+        await db.query("DELETE FROM marks WHERE teacher_id = $1", [teacherId]);
+        // Delete attendance/enrollments/marks for classes owned by this teacher
+        const classIds = await db.query("SELECT id FROM classes WHERE teacher_id = $1", [teacherId]);
+        for (const cls of classIds.rows) {
+          await db.query("DELETE FROM attendance WHERE class_id = $1", [cls.id]);
+          await db.query("DELETE FROM marks WHERE class_id = $1", [cls.id]);
+          await db.query("DELETE FROM class_enrollments WHERE class_id = $1", [cls.id]);
+          await db.query("DELETE FROM announcements WHERE class_id = $1", [cls.id]);
+        }
+        await db.query("DELETE FROM classes WHERE teacher_id = $1", [teacherId]);
+        await db.query("DELETE FROM teachers WHERE id = $1", [teacherId]);
+      }
+    }
+
+    await db.query("DELETE FROM users WHERE id = $1", [id]);
+    await db.query("COMMIT");
+
+    logAudit(adminId, "delete_user", "user", id, { email: user.email, role: user.role });
+
+    return res.json({ message: "User deleted successfully." });
+  } catch (error) {
+    await db.query("ROLLBACK");
+    console.error("Admin delete user error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+/**
+ * PUT /api/admin/teachers/:id/department
+ * Reassign a teacher to a different department.
+ */
+exports.updateTeacherDepartment = async (req, res) => {
+  const { id } = req.params; // teacher id
+  const { department_id } = req.body;
+  const adminId = req.user.userId;
+
+  if (!department_id) {
+    return res.status(400).json({ message: "department_id is required." });
+  }
+
+  try {
+    await db.query("BEGIN");
+
+    const teacherRes = await db.query(
+      "SELECT id, department_id, user_id FROM teachers WHERE id = $1",
+      [id]
+    );
+    if (teacherRes.rowCount === 0) {
+      await db.query("ROLLBACK");
+      return res.status(404).json({ message: "Teacher not found." });
+    }
+
+    const oldDeptId = teacherRes.rows[0].department_id;
+
+    // If teacher was HOD of old department, clear that reference
+    if (oldDeptId) {
+      await db.query(
+        "UPDATE departments SET hod_id = NULL WHERE id = $1 AND hod_id = $2",
+        [oldDeptId, id]
+      );
+      // If they were HOD, revert role to teacher
+      const hodCheck = await db.query(
+        "SELECT role FROM users WHERE id = $1",
+        [teacherRes.rows[0].user_id]
+      );
+      if (hodCheck.rows[0]?.role === "hod") {
+        await db.query("UPDATE users SET role = 'teacher' WHERE id = $1", [teacherRes.rows[0].user_id]);
+      }
+    }
+
+    // Verify new department exists
+    const deptCheck = await db.query("SELECT id FROM departments WHERE id = $1", [department_id]);
+    if (deptCheck.rowCount === 0) {
+      await db.query("ROLLBACK");
+      return res.status(404).json({ message: "Department not found." });
+    }
+
+    await db.query("UPDATE teachers SET department_id = $1 WHERE id = $2", [department_id, id]);
+    await db.query("COMMIT");
+
+    logAudit(adminId, "update_teacher_department", "teacher", id, {
+      old_department: oldDeptId,
+      new_department: department_id,
+    });
+
+    return res.json({ message: "Teacher department updated." });
+  } catch (error) {
+    await db.query("ROLLBACK");
+    console.error("Admin update teacher dept error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+/**
+ * GET /api/admin/audit-logs
+ * Returns recent audit log entries (newest first).
+ */
+exports.getAuditLogs = async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 50, 200);
+
+  try {
+    const result = await db.query(
+      `SELECT al.*, u.email AS admin_email
+       FROM audit_logs al
+       LEFT JOIN users u ON u.id = al.admin_id
+       ORDER BY al.created_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+
+    return res.json({ logs: result.rows });
+  } catch (error) {
+    console.error("Admin audit logs error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };

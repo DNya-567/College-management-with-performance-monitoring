@@ -2,6 +2,7 @@
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
 const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
+const { getActiveSemester } = require("../../utils/getActiveSemester");
 
 exports.createMark = async (req, res) => {
   const { student_id, subject_id, score, total_marks, exam_type, year } = req.body;
@@ -34,9 +35,12 @@ exports.createMark = async (req, res) => {
     }
 
     const teacherId = teacherRes.rows[0].id;
+    const activeSem = await getActiveSemester();
+    const semesterId = activeSem ? activeSem.id : null;
+
     const result = await db.query(
-      "INSERT INTO marks (student_id, subject_id, teacher_id, score, total_marks, exam_type, year) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, student_id, subject_id, teacher_id, score, total_marks, exam_type, year",
-      [student_id, subject_id, teacherId, score, total_marks, exam_type, year]
+      "INSERT INTO marks (student_id, subject_id, teacher_id, score, total_marks, exam_type, year, semester_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, student_id, subject_id, teacher_id, score, total_marks, exam_type, year, semester_id",
+      [student_id, subject_id, teacherId, score, total_marks, exam_type, year, semesterId]
     );
 
     return res.status(201).json({ mark: result.rows[0] });
@@ -143,6 +147,7 @@ exports.getSubjectDifficulty = async (req, res) => {
 
 exports.listMyMarks = async (req, res) => {
   const userId = req.user?.userId;
+  const { semester_id } = req.query;
 
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -154,14 +159,28 @@ exports.listMyMarks = async (req, res) => {
       return res.status(403).json({ message: "Student profile not found." });
     }
 
+    // Resolve semester: use query param, fall back to active, or null for all
+    let semId = semester_id || null;
+    if (!semId) {
+      const activeSem = await getActiveSemester();
+      semId = activeSem ? activeSem.id : null;
+    }
+
+    const params = [studentId];
+    let semFilter = "";
+    if (semId) {
+      params.push(semId);
+      semFilter = ` AND (m.semester_id = $${params.length} OR m.semester_id IS NULL)`;
+    }
+
     const result = await db.query(
-      "SELECT m.id, s.name AS subject_name, t.name AS teacher_name, m.score, m.total_marks, m.exam_type, m.year " +
-        "FROM marks m " +
-        "JOIN subjects s ON s.id = m.subject_id " +
-        "JOIN teachers t ON t.id = m.teacher_id " +
-        "WHERE m.student_id = $1 " +
-        "ORDER BY m.year DESC",
-      [studentId]
+      `SELECT m.id, s.name AS subject_name, t.name AS teacher_name, m.score, m.total_marks, m.exam_type, m.year, m.semester_id
+       FROM marks m
+       JOIN subjects s ON s.id = m.subject_id
+       JOIN teachers t ON t.id = m.teacher_id
+       WHERE m.student_id = $1${semFilter}
+       ORDER BY m.year DESC`,
+      params
     );
 
     return res.json({ marks: result.rows });
@@ -282,9 +301,12 @@ exports.createClassMark = async (req, res) => {
       return res.status(403).json({ message: "Student is not approved for this class." });
     }
 
+    const activeSem = await getActiveSemester();
+    const semesterId = activeSem ? activeSem.id : null;
+
     const result = await db.query(
-      "INSERT INTO marks (class_id, student_id, subject_id, teacher_id, score, total_marks, exam_type, year) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, class_id, student_id, subject_id, teacher_id, score, total_marks, exam_type, year",
-      [classId, student_id, subject_id, teacherId, score, total_marks, exam_type, year]
+      "INSERT INTO marks (class_id, student_id, subject_id, teacher_id, score, total_marks, exam_type, year, semester_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, class_id, student_id, subject_id, teacher_id, score, total_marks, exam_type, year, semester_id",
+      [classId, student_id, subject_id, teacherId, score, total_marks, exam_type, year, semesterId]
     );
 
     return res.status(201).json({ mark: result.rows[0] });
@@ -296,6 +318,7 @@ exports.createClassMark = async (req, res) => {
 
 exports.listMarksByClass = async (req, res) => {
   const { classId } = req.params;
+  const { semester_id } = req.query;
   const teacherUserId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
 
@@ -333,14 +356,28 @@ exports.listMarksByClass = async (req, res) => {
       }
     }
 
+    // Resolve semester filter
+    let semId = semester_id || null;
+    if (!semId) {
+      const activeSem = await getActiveSemester();
+      semId = activeSem ? activeSem.id : null;
+    }
+
+    const params = [classId];
+    let semFilter = "";
+    if (semId) {
+      params.push(semId);
+      semFilter = ` AND (m.semester_id = $${params.length} OR m.semester_id IS NULL)`;
+    }
+
     const result = await db.query(
-      "SELECT m.id, s.id AS student_id, s.name AS student_name, s.roll_no, sub.name AS subject_name, m.score, m.total_marks, m.exam_type, m.year " +
-        "FROM marks m " +
-        "JOIN students s ON s.id = m.student_id " +
-        "JOIN subjects sub ON sub.id = m.subject_id " +
-        "WHERE m.class_id = $1 " +
-        "ORDER BY m.year DESC",
-      [classId]
+      `SELECT m.id, s.id AS student_id, s.name AS student_name, s.roll_no, sub.name AS subject_name, m.score, m.total_marks, m.exam_type, m.year, m.semester_id
+       FROM marks m
+       JOIN students s ON s.id = m.student_id
+       JOIN subjects sub ON sub.id = m.subject_id
+       WHERE m.class_id = $1${semFilter}
+       ORDER BY m.year DESC`,
+      params
     );
 
     return res.json({ marks: result.rows });

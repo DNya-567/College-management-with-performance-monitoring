@@ -5,10 +5,15 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { listApprovedStudents } from "../../api/classes.api";
 import { fetchAttendanceSummary } from "../../api/attendance.api";
+import { downloadReportCard, triggerDownload } from "../../api/reports.api";
 import { useTeacherClasses } from "../../hooks/useTeacherClasses";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import { useSemester } from "../../hooks/useSemester";
 import Spinner from "../../components/ui/Spinner";
+import SemesterSelector from "../../components/ui/SemesterSelector";
 import { http } from "../../api/http";
+import { exportClassMarks, exportClassAttendance, triggerExcelDownload } from "../../api/exports.api";
+import { Download, FileSpreadsheet } from "lucide-react";
 
 const ClassDetails = () => {
   const { classId } = useParams();
@@ -26,6 +31,51 @@ const ClassDetails = () => {
   // Marks summary state
   const [marksSummary, setMarksSummary] = useState([]);
   const [marksLoading, setMarksLoading] = useState(false);
+
+  const { semesters, selectedSemesterId, setSelectedSemesterId, loading: semLoading } = useSemester();
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [exportingMarks, setExportingMarks] = useState(false);
+  const [exportingAtt, setExportingAtt] = useState(false);
+
+  const handleDownloadReport = async (studentId, studentName) => {
+    try {
+      setDownloadingId(studentId);
+      const res = await downloadReportCard(studentId, selectedSemesterId);
+      const sem = semesters.find((s) => s.id === selectedSemesterId);
+      const filename = `ReportCard_${studentName}_${sem?.name || "all"}.pdf`;
+      triggerDownload(res.data, filename);
+    } catch (err) {
+      setError("Failed to download report card.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleExportMarks = async () => {
+    if (!classId) return;
+    try {
+      setExportingMarks(true);
+      const res = await exportClassMarks(classId, selectedSemesterId);
+      triggerExcelDownload(res.data, `Marks_${currentClass?.name || "class"}.xlsx`);
+    } catch {
+      setError("Failed to export marks.");
+    } finally {
+      setExportingMarks(false);
+    }
+  };
+
+  const handleExportAttendance = async () => {
+    if (!classId) return;
+    try {
+      setExportingAtt(true);
+      const res = await exportClassAttendance(classId, selectedSemesterId);
+      triggerExcelDownload(res.data, `Attendance_${currentClass?.name || "class"}.xlsx`);
+    } catch {
+      setError("Failed to export attendance.");
+    } finally {
+      setExportingAtt(false);
+    }
+  };
 
   const currentClass = useMemo(
     () => classes.find((item) => item.id === classId) || null,
@@ -124,19 +174,27 @@ const ClassDetails = () => {
     <DashboardLayout>
       <div ref={scopeRef} className="space-y-6">
         {/* Header */}
-        <div className="anim-item flex items-center justify-between">
+        <div className="anim-item flex items-center justify-between flex-wrap gap-3">
           <div>
             <p className="text-sm text-slate-500">Class</p>
             <h1 className="text-2xl font-semibold text-slate-900">
               {currentClass?.name || "Class details"}
             </h1>
           </div>
-          <Link
-            to="/teacher/classes"
-            className="text-sm font-medium text-[#0052FF]"
-          >
-            Back to classes
-          </Link>
+          <div className="flex items-center gap-3 flex-wrap">
+            <SemesterSelector
+              semesters={semesters}
+              selectedId={selectedSemesterId}
+              onChange={setSelectedSemesterId}
+              loading={semLoading}
+            />
+            <Link
+              to="/teacher/classes"
+              className="text-sm font-medium text-[#0052FF]"
+            >
+              Back to classes
+            </Link>
+          </div>
         </div>
 
         {loading && <Spinner />}
@@ -188,6 +246,26 @@ const ClassDetails = () => {
                     Announcements
                   </button>
                 </div>
+
+                {/* Export actions */}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    onClick={handleExportMarks}
+                    disabled={exportingMarks}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    {exportingMarks ? "Exporting..." : "Export Marks"}
+                  </button>
+                  <button
+                    onClick={handleExportAttendance}
+                    disabled={exportingAtt}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    {exportingAtt ? "Exporting..." : "Export Attendance"}
+                  </button>
+                </div>
               </section>
 
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -205,12 +283,23 @@ const ClassDetails = () => {
                         key={student.id}
                         className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-2"
                       >
-                        <span className="font-medium text-slate-900">
-                          {student.name}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          {student.roll_no}
-                        </span>
+                        <div>
+                          <span className="font-medium text-slate-900">
+                            {student.name}
+                          </span>
+                          <span className="ml-2 text-xs text-slate-500">
+                            {student.roll_no}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleDownloadReport(student.id, student.name)}
+                          disabled={downloadingId === student.id}
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[#0052FF] hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                          title="Download Report Card"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          {downloadingId === student.id ? "..." : "Report"}
+                        </button>
                       </li>
                     ))}
                   </ul>

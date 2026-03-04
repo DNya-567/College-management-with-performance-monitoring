@@ -5,9 +5,14 @@ import DashboardLayout from "../../components/layout/DashboardLayout";
 import { http } from "../../api/http";
 import { useTeacherClasses } from "../../hooks/useTeacherClasses";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import { useSemester } from "../../hooks/useSemester";
+import { exportClassMarks, triggerExcelDownload } from "../../api/exports.api";
+import { FileSpreadsheet } from "lucide-react";
 
 export default function TeacherMarks() {
   const { scopeRef } = usePageAnimation();
+  const { selectedSemesterId } = useSemester();
+  const [exporting, setExporting] = useState(false);
   const [form, setForm] = useState({
     class_id: "",
     subject_id: "",
@@ -195,6 +200,20 @@ export default function TeacherMarks() {
     }
   };
 
+  const handleExportMarks = async () => {
+    if (!form.class_id) return;
+    try {
+      setExporting(true);
+      const res = await exportClassMarks(form.class_id, selectedSemesterId);
+      const cls = classes.find((c) => c.id === form.class_id);
+      triggerExcelDownload(res.data, `Marks_${cls?.name || "class"}.xlsx`);
+    } catch {
+      setOptionsError("Failed to export marks.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const sortedStudents = useMemo(
     () =>
       [...students].sort((a, b) =>
@@ -209,11 +228,23 @@ export default function TeacherMarks() {
   return (
     <DashboardLayout>
       <div ref={scopeRef} className="space-y-6">
-        <div className="anim-item">
-          <h1 className="text-2xl font-semibold text-slate-900">Enter Marks</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Select a class and enter marks for each student.
-          </p>
+        <div className="anim-item flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Enter Marks</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Select a class and enter marks for each student.
+            </p>
+          </div>
+          {form.class_id && (
+            <button
+              onClick={handleExportMarks}
+              disabled={exporting}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              {exporting ? "Exporting..." : "Export Marks"}
+            </button>
+          )}
         </div>
 
         <section className="anim-item rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

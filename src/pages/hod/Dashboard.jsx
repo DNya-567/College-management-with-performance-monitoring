@@ -6,10 +6,13 @@ import DashboardLayout from "../../components/layout/DashboardLayout";
 import { listDepartmentClasses, fetchDepartmentStats } from "../../api/classes.api";
 import { fetchClassPerformance } from "../../api/performance.api";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import { useSemester } from "../../hooks/useSemester";
+import SemesterSelector from "../../components/ui/SemesterSelector";
 
 export default function HodDashboard() {
   const navigate = useNavigate();
   const { scopeRef } = usePageAnimation();
+  const { semesters, selectedSemesterId, setSelectedSemesterId, loading: semLoading } = useSemester();
 
   // Stats
   const [stats, setStats] = useState(null);
@@ -97,9 +100,17 @@ export default function HodDashboard() {
   return (
     <DashboardLayout>
       <div ref={scopeRef} className="space-y-6">
-        <div className="anim-item">
-          <h1 className="text-2xl font-semibold text-slate-900">HOD Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">Department overview and performance.</p>
+        <div className="anim-item flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">HOD Dashboard</h1>
+            <p className="mt-1 text-sm text-slate-500">Department overview and performance.</p>
+          </div>
+          <SemesterSelector
+            semesters={semesters}
+            selectedId={selectedSemesterId}
+            onChange={setSelectedSemesterId}
+            loading={semLoading}
+          />
         </div>
 
         {/* Quick actions */}
