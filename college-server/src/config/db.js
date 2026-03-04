@@ -1,24 +1,33 @@
+// Database connection pool.
+// Must NOT contain business logic — only connection config and pool setup.
 const { Pool } = require("pg");
+const env = require("./env");
 
 const pool = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  port: Number(process.env.DB_PORT) || 5432,
-  user: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD || "dnyanesh",
-  database: process.env.DB_NAME || "college_db",
-  ssl: false, // local dev
-  max: 10,                // max pool size — prevents unbounded connections
-  idleTimeoutMillis: 30000, // close idle clients after 30s
-  connectionTimeoutMillis: 5000, // fail fast if DB unreachable
+  host: env.DB_HOST,
+  port: env.DB_PORT,
+  user: env.DB_USER,
+  password: env.DB_PASSWORD,
+  database: env.DB_NAME,
+  ssl: env.isProduction ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
 });
 
+// Log once on first successful connection — NOT on every checkout
+let hasLoggedConnect = false;
 pool.on("connect", () => {
-  console.log("✅ Connected to PostgreSQL");
+  if (!hasLoggedConnect) {
+    console.log("✅ Connected to PostgreSQL");
+    hasLoggedConnect = true;
+  }
 });
 
 pool.on("error", (err) => {
-  console.error("❌ PostgreSQL error:", err);
-  process.exit(1);
+  console.error("❌ PostgreSQL pool error:", err.message);
+  // Log but don't crash — individual queries will fail with clear errors.
+  // In production, let the process manager (PM2) handle restarts if needed.
 });
 
 module.exports = pool;

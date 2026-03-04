@@ -1,0 +1,12 @@
+✅ auth: loaded (type: function)
+✅ marks: loaded (type: function)
+✅ classes: loaded (type: function)
+✅ enrollments: loaded (type: function)
+✅ attendance: loaded (type: function)
+✅ subjects: loaded (type: function)
+✅ teachers: loaded (type: function)
+✅ students: loaded (type: function)
+✅ announcements: loaded (type: function)
+✅ performance: loaded (type: function)
+✅ departments: loaded (type: function)
+✅ app.js loaded

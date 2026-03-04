@@ -4,7 +4,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
-import { registerTeacher, registerStudent } from "../api/auth.api";
+import { registerTeacher, registerStudent, registerHod } from "../api/auth.api";
+import { listDepartments } from "../api/departments.api";
 import gsap from "gsap";
 
 const roleToPath = {
@@ -29,6 +30,7 @@ const Login = () => {
     name: "",
     email: "",
     password: "",
+    department_id: "",
   });
   const [registerStatus, setRegisterStatus] = useState("");
   const [registerError, setRegisterError] = useState("");
@@ -45,7 +47,20 @@ const Login = () => {
   const [studentError, setStudentError] = useState("");
 
   // UI mode
-  const [mode, setMode] = useState("login"); // "login" | "teacher" | "student"
+  const [mode, setMode] = useState("login"); // "login" | "teacher" | "student" | "hod"
+
+  // HOD registration state
+  const [hodForm, setHodForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    department_id: "",
+  });
+  const [hodStatus, setHodStatus] = useState("");
+  const [hodError, setHodError] = useState("");
+
+  // Departments list (for HOD & teacher registration)
+  const [departments, setDepartments] = useState([]);
 
   // GSAP refs
   const containerRef = useRef(null);
@@ -55,6 +70,7 @@ const Login = () => {
   const registerSectionRef = useRef(null);
   const teacherFormRef = useRef(null);
   const studentFormRef = useRef(null);
+  const hodFormRef = useRef(null);
   const floatingRef = useRef(null);
 
   // Redirect on auth
@@ -64,6 +80,17 @@ const Login = () => {
       navigate(target, { replace: true });
     }
   }, [isAuthenticated, user, loading, navigate]);
+
+  // Load departments for registration dropdowns
+  useEffect(() => {
+    listDepartments()
+      .then((res) => {
+        setDepartments(res.data?.departments || []);
+      })
+      .catch((err) => {
+        console.error("Failed to load departments:", err.response?.status, err.message);
+      });
+  }, []);
 
   // ─── Entrance animation ───
   useLayoutEffect(() => {
@@ -131,7 +158,9 @@ const Login = () => {
         ? teacherFormRef.current
         : mode === "student"
           ? studentFormRef.current
-          : null;
+          : mode === "hod"
+            ? hodFormRef.current
+            : null;
 
     if (target) {
       gsap.fromTo(
@@ -194,9 +223,10 @@ const Login = () => {
         name: registerForm.name,
         email: registerForm.email,
         password: registerForm.password,
+        department_id: registerForm.department_id || undefined,
       });
       setRegisterStatus("Registration successful. Please sign in.");
-      setRegisterForm({ name: "", email: "", password: "" });
+      setRegisterForm({ name: "", email: "", password: "", department_id: "" });
       setMode("login");
     } catch (err) {
       setRegisterError(err.response?.data?.message || "Registration failed.");
@@ -221,6 +251,26 @@ const Login = () => {
       setMode("login");
     } catch (err) {
       setStudentError(err.response?.data?.message || "Student registration failed.");
+    }
+  };
+
+  const handleHodRegister = async (event) => {
+    event.preventDefault();
+    setHodError("");
+    setHodStatus("");
+
+    try {
+      await registerHod({
+        name: hodForm.name,
+        email: hodForm.email,
+        password: hodForm.password,
+        department_id: hodForm.department_id,
+      });
+      setHodStatus("HOD registered. Please sign in.");
+      setHodForm({ name: "", email: "", password: "", department_id: "" });
+      setMode("login");
+    } catch (err) {
+      setHodError(err.response?.data?.message || "HOD registration failed.");
     }
   };
 
@@ -277,6 +327,11 @@ const Login = () => {
           {studentStatus && (
             <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-600">
               {studentStatus}
+            </p>
+          )}
+          {hodStatus && (
+            <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-600">
+              {hodStatus}
             </p>
           )}
 
@@ -349,6 +404,17 @@ const Login = () => {
               >
                 Teacher
               </button>
+              <button
+                type="button"
+                className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
+                  mode === "hod"
+                    ? "bg-[#0052FF] text-white shadow-md shadow-blue-500/20"
+                    : "border border-slate-200 text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-[#0052FF]"
+                }`}
+                onClick={() => setMode(mode === "hod" ? "login" : "hod")}
+              >
+                HOD
+              </button>
             </div>
           </div>
 
@@ -395,6 +461,20 @@ const Login = () => {
                     onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                     required
                   />
+                </div>
+                <div className="reg-field space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="reg-dept">Department</label>
+                  <select
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm transition focus:border-[#0052FF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0052FF]/10"
+                    id="reg-dept"
+                    value={registerForm.department_id || ""}
+                    onChange={(e) => setRegisterForm({ ...registerForm, department_id: e.target.value })}
+                  >
+                    <option value="">Select department (optional)</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <button
                   type="submit"
@@ -484,6 +564,76 @@ const Login = () => {
                   disabled={loading}
                 >
                   Create Student Account
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* HOD registration form */}
+          {mode === "hod" && (
+            <div ref={hodFormRef} className="mt-5 overflow-hidden">
+              {hodError && (
+                <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+                  {hodError}
+                </p>
+              )}
+              <form className="space-y-3" onSubmit={handleHodRegister}>
+                <div className="reg-field space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="hod-name">Name</label>
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm transition focus:border-[#0052FF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0052FF]/10"
+                    id="hod-name"
+                    placeholder="Full name"
+                    value={hodForm.name}
+                    onChange={(e) => setHodForm({ ...hodForm, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="reg-field space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="hod-email">Email</label>
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm transition focus:border-[#0052FF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0052FF]/10"
+                    id="hod-email"
+                    type="email"
+                    placeholder="hod@university.edu"
+                    value={hodForm.email}
+                    onChange={(e) => setHodForm({ ...hodForm, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="reg-field space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="hod-password">Password</label>
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm transition focus:border-[#0052FF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0052FF]/10"
+                    id="hod-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={hodForm.password}
+                    onChange={(e) => setHodForm({ ...hodForm, password: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="reg-field space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="hod-dept">Department</label>
+                  <select
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm transition focus:border-[#0052FF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0052FF]/10"
+                    id="hod-dept"
+                    value={hodForm.department_id}
+                    onChange={(e) => setHodForm({ ...hodForm, department_id: e.target.value })}
+                    required
+                  >
+                    <option value="">Select department</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="reg-field w-full rounded-full bg-[#0052FF] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-600 hover:shadow-lg active:scale-[0.98] disabled:opacity-60"
+                  disabled={loading || !hodForm.department_id}
+                >
+                  Create HOD Account
                 </button>
               </form>
             </div>

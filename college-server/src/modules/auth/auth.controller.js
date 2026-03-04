@@ -4,6 +4,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const db = require("../../config/db");
+const env = require("../../config/env");
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
@@ -38,7 +39,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, role: normalizedRole },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: env.JWT_EXPIRES_IN }
     );
 
     return res.json({
@@ -125,6 +126,53 @@ exports.registerTeacher = async (req, res) => {
       return res.status(409).json({ message: "Email already in use." });
     }
     console.error("Register teacher error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+/**
+ * POST /api/auth/register/hod
+ * HOD is a teacher with role='hod'. Requires department_id so the system
+ * can scope all department queries to this HOD's department.
+ */
+exports.registerHod = async (req, res) => {
+  const { name, email, password, department_id } = req.body;
+
+  if (!name || !email || !password || !department_id) {
+    return res.status(400).json({
+      message: "Name, email, password, and department are required.",
+    });
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await db.query("BEGIN");
+
+    const userResult = await db.query(
+      "INSERT INTO users (email, password_hash, role) VALUES ($1, $2, 'hod') RETURNING id, email, role",
+      [email, passwordHash]
+    );
+
+    const user = userResult.rows[0];
+
+    const teacherResult = await db.query(
+      "INSERT INTO teachers (name, department_id, user_id) VALUES ($1, $2, $3) RETURNING id, name, department_id, user_id",
+      [name, department_id, user.id]
+    );
+
+    await db.query("COMMIT");
+
+    return res.status(201).json({
+      user: { id: user.id, email: user.email, role: String(user.role).toLowerCase() },
+      teacher: teacherResult.rows[0],
+    });
+  } catch (error) {
+    await db.query("ROLLBACK");
+    if (error.code === "23505") {
+      return res.status(409).json({ message: "Email already in use." });
+    }
+    console.error("Register HOD error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };

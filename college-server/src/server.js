@@ -1,24 +1,31 @@
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
-// Verify JWT_SECRET is present (do NOT log the actual value)
-if (!process.env.JWT_SECRET) {
-  console.error("⚠️ JWT_SECRET is not set — auth will fail");
-}
+// Load & validate all environment variables BEFORE anything else
+const env = require("./config/env");
 
 const app = require("./app");
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+app.listen(env.PORT, () => {
+  console.log(
+    `🚀 Server running on http://localhost:${env.PORT} [${env.NODE_ENV}]`
+  );
 });
 
-// Log memory usage once at startup for reference
-const used = process.memoryUsage();
-console.log("Startup memory (MB):", {
-  rss: Math.round(used.rss / 1024 / 1024),
-  heapUsed: Math.round(used.heapUsed / 1024 / 1024),
-  heapTotal: Math.round(used.heapTotal / 1024 / 1024),
-});
+// Graceful shutdown — close DB pool and exit cleanly
+const shutdown = (signal) => {
+  console.log(`\n${signal} received — shutting down gracefully`);
+  const pool = require("./config/db");
+  pool.end().then(() => {
+    console.log("Database pool closed");
+    process.exit(0);
+  });
+};
 
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+// Catch unhandled rejections so the process doesn't silently swallow errors
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Promise Rejection:", reason);
+});

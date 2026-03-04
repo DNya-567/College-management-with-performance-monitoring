@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { http } from "../../api/http";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import Spinner from "../../components/ui/Spinner";
 
 const EnrollmentRequests = () => {
   const [requests, setRequests] = useState([]);
@@ -47,7 +48,7 @@ const EnrollmentRequests = () => {
           </p>
         </div>
 
-        {loading && <p className="text-sm text-slate-500">Loading...</p>}
+        {loading && <Spinner />}
         {error && (
           <p className="text-sm text-red-600" role="alert">
             {error}
