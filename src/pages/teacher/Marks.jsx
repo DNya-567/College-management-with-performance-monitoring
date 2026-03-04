@@ -7,7 +7,9 @@ import { useTeacherClasses } from "../../hooks/useTeacherClasses";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
 import { useSemester } from "../../hooks/useSemester";
 import { exportClassMarks, triggerExcelDownload } from "../../api/exports.api";
-import { FileSpreadsheet } from "lucide-react";
+import { importMarksCSV, downloadMarksTemplate, triggerCSVDownload } from "../../api/imports.api";
+import ImportResultsModal from "../../components/ui/ImportResultsModal";
+import { FileSpreadsheet, Upload, Download } from "lucide-react";
 
 export default function TeacherMarks() {
   const { scopeRef } = usePageAnimation();
@@ -27,6 +29,9 @@ export default function TeacherMarks() {
   const [editingStudentId, setEditingStudentId] = useState(null);
   const [optionsError, setOptionsError] = useState("");
   const [status, setStatus] = useState("");
+  const [importingCSV, setImportingCSV] = useState(false);
+  const [importResults, setImportResults] = useState(null);
+  const [showImportResults, setShowImportResults] = useState(false);
 
   const currentMarksByStudent = useMemo(() => {
     const filtered = classMarks.filter(
@@ -214,6 +219,34 @@ export default function TeacherMarks() {
     }
   };
 
+  const handleImportCSV = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !form.class_id) return;
+    e.target.value = "";
+    try {
+      setImportingCSV(true);
+      const res = await importMarksCSV(form.class_id, file);
+      setImportResults(res.data?.summary || null);
+      setShowImportResults(true);
+      // Refresh marks
+      const updatedMarks = await http.get(`/classes/${form.class_id}/marks`);
+      setClassMarks(updatedMarks.data?.marks || []);
+    } catch (err) {
+      setOptionsError(err.response?.data?.message || "Failed to import CSV.");
+    } finally {
+      setImportingCSV(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const res = await downloadMarksTemplate();
+      triggerCSVDownload(res.data, "marks_import_template.csv");
+    } catch {
+      setOptionsError("Failed to download template.");
+    }
+  };
+
   const sortedStudents = useMemo(
     () =>
       [...students].sort((a, b) =>
@@ -236,14 +269,34 @@ export default function TeacherMarks() {
             </p>
           </div>
           {form.class_id && (
-            <button
-              onClick={handleExportMarks}
-              disabled={exporting}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              {exporting ? "Exporting..." : "Export Marks"}
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleDownloadTemplate}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Template
+              </button>
+              <label className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#0052FF] bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer ${importingCSV ? "opacity-50 pointer-events-none" : ""}`}>
+                <Upload className="w-4 h-4" />
+                {importingCSV ? "Importing..." : "Import CSV"}
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={handleImportCSV}
+                  disabled={importingCSV}
+                />
+              </label>
+              <button
+                onClick={handleExportMarks}
+                disabled={exporting}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                {exporting ? "Exporting..." : "Export Marks"}
+              </button>
+            </div>
           )}
         </div>
 
@@ -426,6 +479,13 @@ export default function TeacherMarks() {
             </div>
           </form>
         </section>
+
+        {/* Import Results Modal */}
+        <ImportResultsModal
+          open={showImportResults}
+          onClose={() => setShowImportResults(false)}
+          results={importResults}
+        />
       </div>
     </DashboardLayout>
   );
