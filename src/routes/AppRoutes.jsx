@@ -8,6 +8,7 @@ import ManageDepartments from "../pages/admin/ManageDepartments";
 import ManageTeachers from "../pages/admin/ManageTeachers";
 import ManageStudents from "../pages/admin/ManageStudents";
 import SystemOverview from "../pages/admin/SystemOverview";
+import ManageSemesters from "../pages/admin/ManageSemesters";
 import TeacherDashboard from "../pages/teacher/Dashboard";
 import StudentDashboard from "../pages/student/Dashboard";
 import HodDashboard from "../pages/hod/Dashboard";
@@ -83,6 +84,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute allowedRoles={["admin"]}>
           <SystemOverview />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/semesters"
+      element={
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <ManageSemesters />
         </ProtectedRoute>
       }
     />

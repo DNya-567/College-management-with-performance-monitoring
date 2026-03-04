@@ -17,6 +17,9 @@ const { classRouter: announcementsClassRoutes } = require("./modules/announcemen
 const performanceRoutes = require("./modules/performance/performance.routes");
 const departmentsRoutes = require("./modules/departments/departments.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
+const semestersRoutes = require("./modules/semesters/semesters.routes");
+const reportsRoutes = require("./modules/reports/reports.routes");
+const exportsRoutes = require("./modules/exports/exports.routes");
 
 const app = express();
 
@@ -84,6 +87,9 @@ app.use("/api/classes", announcementsClassRoutes);
 app.use("/api", performanceRoutes);
 app.use("/api/departments", departmentsRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/semesters", semestersRoutes);
+app.use("/api/reports", reportsRoutes);
+app.use("/api/exports", exportsRoutes);
 
 // ── 404 handler — must come AFTER all route mounts ──
 app.use((_req, res) => {

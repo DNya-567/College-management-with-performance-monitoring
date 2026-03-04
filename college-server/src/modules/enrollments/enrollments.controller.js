@@ -2,6 +2,7 @@
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
 const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
+const { getActiveSemester } = require("../../utils/getActiveSemester");
 
 exports.requestEnrollment = async (req, res) => {
   const { classId } = req.params;
@@ -26,9 +27,12 @@ exports.requestEnrollment = async (req, res) => {
       return res.status(409).json({ message: "Enrollment already exists." });
     }
 
+    const activeSem = await getActiveSemester();
+    const semesterId = activeSem ? activeSem.id : null;
+
     const result = await db.query(
-      "INSERT INTO class_enrollments (class_id, student_id, status) VALUES ($1, $2, 'pending') RETURNING id, class_id, student_id, status",
-      [classId, studentId]
+      "INSERT INTO class_enrollments (class_id, student_id, status, semester_id) VALUES ($1, $2, 'pending', $3) RETURNING id, class_id, student_id, status, semester_id",
+      [classId, studentId, semesterId]
     );
 
     return res.status(201).json({ enrollment: result.rows[0] });

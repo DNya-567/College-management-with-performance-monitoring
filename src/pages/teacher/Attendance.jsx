@@ -11,6 +11,9 @@ import {
   submitClassAttendance,
 } from "../../api/attendance.api";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import { useSemester } from "../../hooks/useSemester";
+import { exportClassAttendance, triggerExcelDownload } from "../../api/exports.api";
+import { FileSpreadsheet } from "lucide-react";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -25,7 +28,9 @@ const Attendance = () => {
   // ── Shared state ──
   const { classes } = useTeacherClasses();
   const { scopeRef } = usePageAnimation();
+  const { selectedSemesterId } = useSemester();
   const [classId, setClassId] = useState("");
+  const [exportingAtt, setExportingAtt] = useState(false);
 
   // ── Table section state ──
   const [students, setStudents] = useState([]);
@@ -274,6 +279,20 @@ const Attendance = () => {
     setHeatmapError("");
   };
 
+  const handleExportAttendance = async () => {
+    if (!classId) return;
+    try {
+      setExportingAtt(true);
+      const res = await exportClassAttendance(classId, selectedSemesterId);
+      const cls = classes.find((c) => c.id === classId);
+      triggerExcelDownload(res.data, `Attendance_${cls?.name || "class"}.xlsx`);
+    } catch {
+      setError("Failed to export attendance.");
+    } finally {
+      setExportingAtt(false);
+    }
+  };
+
   const selectedStudent = useMemo(
     () => students.find((s) => s.id === heatmapStudentId),
     [students, heatmapStudentId]
@@ -282,11 +301,23 @@ const Attendance = () => {
   return (
     <DashboardLayout>
       <div ref={scopeRef} className="space-y-6">
-        <div className="anim-item">
-          <h1 className="text-2xl font-semibold text-slate-900">Attendance</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Mark attendance by table or visually with the heatmap.
-          </p>
+        <div className="anim-item flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Attendance</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Mark attendance by table or visually with the heatmap.
+            </p>
+          </div>
+          {classId && (
+            <button
+              onClick={handleExportAttendance}
+              disabled={exportingAtt}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              {exportingAtt ? "Exporting..." : "Export Attendance"}
+            </button>
+          )}
         </div>
 
         {/* ── Shared class selector ── */}

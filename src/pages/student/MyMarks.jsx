@@ -4,8 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { http } from "../../api/http";
 import { fetchMyPerformance, fetchMyTrend } from "../../api/performance.api";
+import { getMyStudentProfile } from "../../api/students.api";
+import { downloadReportCard, triggerDownload } from "../../api/reports.api";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import { useSemester } from "../../hooks/useSemester";
+import SemesterSelector from "../../components/ui/SemesterSelector";
 import Spinner from "../../components/ui/Spinner";
+import { Download } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -23,9 +28,12 @@ const examLabel = (exam) => {
 
 const MyMarks = () => {
   const { scopeRef } = usePageAnimation();
+  const { semesters, selectedSemesterId, setSelectedSemesterId, loading: semLoading } = useSemester();
   const [marks, setMarks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [studentId, setStudentId] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
   // Performance summary
   const [perf, setPerf] = useState(null);
@@ -47,12 +55,42 @@ const MyMarks = () => {
       }));
   }, [perf]);
 
-  // Load marks
+  // Load student profile to get student ID for report download
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
       try {
-        const response = await http.get("/marks/me");
+        const res = await getMyStudentProfile();
+        if (isMounted) setStudentId(res.data?.student?.id || null);
+      } catch { /* silent */ }
+    };
+    void load();
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleDownloadReport = async () => {
+    if (!studentId) return;
+    try {
+      setDownloading(true);
+      const res = await downloadReportCard(studentId, selectedSemesterId);
+      const sem = semesters.find((s) => s.id === selectedSemesterId);
+      const filename = `ReportCard_${sem?.name || "all"}.pdf`;
+      triggerDownload(res.data, filename);
+    } catch {
+      setError("Failed to download report card.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Load marks (re-fetch when selected semester changes)
+  useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const params = selectedSemesterId ? { semester_id: selectedSemesterId } : {};
+        const response = await http.get("/marks/me", { params });
         if (isMounted) setMarks(response.data?.marks || []);
       } catch (err) {
         if (isMounted) setError(err.response?.data?.message || "Failed to load marks.");
@@ -62,7 +100,7 @@ const MyMarks = () => {
     };
     void load();
     return () => { isMounted = false; };
-  }, []);
+  }, [selectedSemesterId]);
 
   // Load performance summary
   useEffect(() => {
@@ -101,11 +139,31 @@ const MyMarks = () => {
   return (
     <DashboardLayout>
       <div ref={scopeRef} className="space-y-6">
-        <div className="anim-item">
-          <h1 className="text-2xl font-semibold text-slate-900">View Marks</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            All marks assigned by your teachers.
-          </p>
+        <div className="anim-item flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">View Marks</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              All marks assigned by your teachers.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <SemesterSelector
+              semesters={semesters}
+              selectedId={selectedSemesterId}
+              onChange={setSelectedSemesterId}
+              loading={semLoading}
+            />
+            {studentId && marks.length > 0 && (
+              <button
+                onClick={handleDownloadReport}
+                disabled={downloading}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-[#0052FF] rounded-lg hover:bg-[#0041cc] transition-colors disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                {downloading ? "Generating..." : "Download Report Card"}
+              </button>
+            )}
+          </div>
         </div>
 
         {loading && <Spinner />}

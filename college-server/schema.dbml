@@ -46,6 +46,20 @@ Table departments {
 // ACADEMIC STRUCTURE
 // ──────────────────────────────────────────────
 
+Table semesters {
+  id UUID [pk, default: `gen_random_uuid()`]
+  name TEXT [not null]
+  academic_year TEXT [not null]
+  start_date DATE [not null]
+  end_date DATE [not null]
+  is_active BOOLEAN [default: false, note: "Only one active at a time"]
+  created_at TIMESTAMP [default: `now()`]
+
+  indexes {
+    is_active
+  }
+}
+
 Table subjects {
   id UUID [pk, default: `gen_random_uuid()`]
   name TEXT [not null]
@@ -69,11 +83,13 @@ Table class_enrollments {
   id UUID [pk, default: `gen_random_uuid()`]
   class_id UUID [not null, ref: > classes.id]
   student_id UUID [not null, ref: > students.id]
+  semester_id UUID [ref: > semesters.id, note: "Auto-injected from active semester"]
   status VARCHAR [not null, note: "CHECK (status IN ('pending', 'approved', 'rejected'))"]
 
   indexes {
     (class_id, status)
     (student_id, status)
+    semester_id
   }
 }
 
@@ -87,6 +103,7 @@ Table marks {
   student_id UUID [not null, ref: > students.id]
   subject_id UUID [not null, ref: > subjects.id]
   teacher_id UUID [not null, ref: > teachers.id]
+  semester_id UUID [ref: > semesters.id, note: "Auto-injected from active semester"]
   score INTEGER [not null]
   total_marks INTEGER [note: "Max marks for the exam"]
   exam_type VARCHAR [not null, note: "'internal', 'midterm', 'final', etc."]
@@ -96,6 +113,8 @@ Table marks {
     student_id
     class_id
     exam_type
+    semester_id
+    (student_id, subject_id, exam_type, class_id, semester_id) [unique, note: "Partial — WHERE semester_id IS NOT NULL"]
   }
 }
 
@@ -107,6 +126,7 @@ Table attendance {
   id SERIAL [pk]
   class_id UUID [not null, ref: > classes.id]
   student_id UUID [not null, ref: > students.id]
+  semester_id UUID [ref: > semesters.id, note: "Auto-injected from active semester"]
   date DATE [not null]
   status TEXT [not null, note: "CHECK (status IN ('present', 'absent'))"]
 
@@ -114,6 +134,7 @@ Table attendance {
     class_id
     (class_id, date)
     student_id
+    semester_id
     (class_id, student_id, date) [unique]
   }
 }
