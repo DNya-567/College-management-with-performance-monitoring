@@ -6,6 +6,7 @@ import AttendanceHeatmap from "../../components/attendance/AttendanceHeatmap";
 import { getMyStudentProfile } from "../../api/students.api";
 import { useStudentEnrollments } from "../../hooks/useStudentEnrollments";
 import { listMyAttendance } from "../../api/attendance.api";
+import Spinner from "../../components/ui/Spinner";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
 
 const buildStats = (attendance) => {
@@ -113,7 +114,7 @@ const StudentProfile = () => {
           </p>
         </div>
 
-        {loading && <p className="text-sm text-slate-500">Loading...</p>}
+        {loading && <Spinner />}
         {error && (
           <p className="text-sm text-red-600" role="alert">
             {error}

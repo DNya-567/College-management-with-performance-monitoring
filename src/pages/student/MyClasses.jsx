@@ -3,6 +3,7 @@
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { useStudentEnrollments } from "../../hooks/useStudentEnrollments";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import Spinner from "../../components/ui/Spinner";
 
 const MyClasses = () => {
   const { enrollments, loading, error } = useStudentEnrollments();
@@ -18,7 +19,7 @@ const MyClasses = () => {
           </p>
         </div>
 
-        {loading && <p className="text-sm text-slate-500">Loading...</p>}
+        {loading && <Spinner />}
         {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
 
         {!loading && !error && (

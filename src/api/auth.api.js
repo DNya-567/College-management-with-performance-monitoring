@@ -12,3 +12,7 @@ export const registerTeacher = (payload) =>
 
 export const registerStudent = (payload) =>
   http.post("/auth/register/student", payload);
+
+export const registerHod = (payload) =>
+  http.post("/auth/register/hod", payload);
+

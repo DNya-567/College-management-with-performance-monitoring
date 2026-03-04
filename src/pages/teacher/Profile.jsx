@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { getMyTeacherProfile } from "../../api/teachers.api";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import Spinner from "../../components/ui/Spinner";
 
 const TeacherProfile = () => {
   const [teacher, setTeacher] = useState(null);
@@ -42,7 +43,7 @@ const TeacherProfile = () => {
     <DashboardLayout>
       <div ref={scopeRef}>
         <h1 className="anim-item text-2xl font-semibold text-slate-900">My Profile</h1>
-        {loading && <p className="mt-4 text-sm text-slate-500">Loading...</p>}
+        {loading && <Spinner />}
         {error && <p className="mt-4 text-sm text-red-600" role="alert">{error}</p>}
         {teacher && !loading && (
           <div className="anim-item mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

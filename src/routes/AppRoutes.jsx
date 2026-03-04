@@ -3,6 +3,11 @@
 import { Routes, Route } from "react-router-dom";
 import Login from "../pages/Login";
 import AdminDashboard from "../pages/admin/Dashboard";
+import ManageUsers from "../pages/admin/ManageUsers";
+import ManageDepartments from "../pages/admin/ManageDepartments";
+import ManageTeachers from "../pages/admin/ManageTeachers";
+import ManageStudents from "../pages/admin/ManageStudents";
+import SystemOverview from "../pages/admin/SystemOverview";
 import TeacherDashboard from "../pages/teacher/Dashboard";
 import StudentDashboard from "../pages/student/Dashboard";
 import HodDashboard from "../pages/hod/Dashboard";
@@ -26,17 +31,58 @@ import HodClassDetails from "../pages/hod/ClassDetails";
 import HodEnrollmentRequests from "../pages/hod/EnrollmentRequests";
 import HodAnnouncements from "../pages/hod/Announcements";
 import HodPerformance from "../pages/hod/Performance";
+import NotFound from "../pages/NotFound";
 
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
     <Route path="/" element={<Navigate to="/login" replace />} />
-    <Route path="*" element={<Navigate to="/login" replace />} />
+    <Route path="*" element={<NotFound />} />
     <Route
       path="/admin"
       element={
         <ProtectedRoute allowedRoles={["admin"]}>
           <AdminDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/users"
+      element={
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <ManageUsers />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/departments"
+      element={
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <ManageDepartments />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/teachers"
+      element={
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <ManageTeachers />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/students"
+      element={
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <ManageStudents />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/overview"
+      element={
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <SystemOverview />
         </ProtectedRoute>
       }
     />

@@ -5,6 +5,7 @@ import { useTeacherClasses } from "../../hooks/useTeacherClasses";
 import { listTopAttendance } from "../../api/attendance.api";
 import { fetchClassPerformance } from "../../api/performance.api";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import Spinner from "../../components/ui/Spinner";
 
 // Teacher Dashboard: landing page for teacher role
 // Responsibility: show quick actions for teachers
@@ -183,7 +184,7 @@ export default function TeacherDashboard() {
           </div>
 
           {loading && (
-            <p className="mt-4 text-sm text-slate-500">Loading...</p>
+            <Spinner />
           )}
           {error && (
             <p className="mt-4 text-sm text-red-600" role="alert">

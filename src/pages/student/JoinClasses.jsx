@@ -5,6 +5,7 @@ import DashboardLayout from "../../components/layout/DashboardLayout";
 import { http } from "../../api/http";
 import { listPendingEnrollments } from "../../api/enrollments.api";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import Spinner from "../../components/ui/Spinner";
 
 const JoinClasses = () => {
   const { scopeRef } = usePageAnimation();
@@ -105,7 +106,7 @@ const JoinClasses = () => {
               Waiting for teacher approval.
             </p>
 
-            {loading && <p className="mt-4 text-sm text-slate-500">Loading...</p>}
+            {loading && <Spinner />}
             {error && (
               <p className="mt-4 text-sm text-red-600" role="alert">
                 {error}

@@ -7,6 +7,7 @@ import { listApprovedStudents } from "../../api/classes.api";
 import { fetchAttendanceSummary } from "../../api/attendance.api";
 import { useTeacherClasses } from "../../hooks/useTeacherClasses";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import Spinner from "../../components/ui/Spinner";
 import { http } from "../../api/http";
 
 const ClassDetails = () => {
@@ -138,7 +139,7 @@ const ClassDetails = () => {
           </Link>
         </div>
 
-        {loading && <p className="text-sm text-slate-500">Loading...</p>}
+        {loading && <Spinner />}
         {error && (
           <p className="text-sm text-red-600" role="alert">
             {error}

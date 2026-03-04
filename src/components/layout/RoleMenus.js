@@ -12,12 +12,19 @@ import {
   PlusCircle,
   BarChart3,
   Users,
+  Building2,
+  UserCheck,
+  Eye,
 } from "lucide-react";
 
 export const roleMenus = {
   admin: [
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
-    { label: "Marks", path: "/admin/marks", icon: ClipboardList },
+    { label: "Manage Users", path: "/admin/users", icon: Users },
+    { label: "Departments", path: "/admin/departments", icon: Building2 },
+    { label: "Teachers", path: "/admin/teachers", icon: GraduationCap },
+    { label: "Students", path: "/admin/students", icon: UserCheck },
+    { label: "System Overview", path: "/admin/overview", icon: Eye },
   ],
   teacher: [
     { label: "Dashboard", path: "/teacher", icon: LayoutDashboard },

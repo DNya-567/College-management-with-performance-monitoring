@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { listAnnouncements } from "../../api/announcements.api";
+import Spinner from "../../components/ui/Spinner";
 
 const StudentAnnouncements = () => {
   const [announcements, setAnnouncements] = useState([]);
@@ -69,7 +70,7 @@ const StudentAnnouncements = () => {
           )}
         </div>
 
-        {loading && <p className="text-sm text-slate-500">Loading...</p>}
+        {loading && <Spinner />}
         {error && (
           <p className="text-sm text-red-600" role="alert">
             {error}

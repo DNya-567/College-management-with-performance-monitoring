@@ -4,6 +4,7 @@ import AttendanceHeatmap from "../../components/attendance/AttendanceHeatmap";
 import { useStudentEnrollments } from "../../hooks/useStudentEnrollments";
 import { listMyAttendance } from "../../api/attendance.api";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import Spinner from "../../components/ui/Spinner";
 
 const buildStats = (attendance) => {
   const total = attendance.length;
@@ -92,7 +93,7 @@ export default function StudentDashboard() {
           </p>
         </div>
 
-        {loading && <p className="text-sm text-slate-500">Loading...</p>}
+        {loading && <Spinner />}
         {error && (
           <p className="text-sm text-red-600" role="alert">
             {error}
