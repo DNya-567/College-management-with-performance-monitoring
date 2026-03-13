@@ -1,7 +1,7 @@
 // Sidebar UI: renders navigation based on the current user's role.
 // GSAP is used for entrance animation.
 // Must NOT fetch data or contain business logic beyond simple display rules.
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../auth/useAuth";
 import { roleMenus } from "./RoleMenus";
@@ -12,8 +12,7 @@ const MAX_WIDTH = 360;
 const STORAGE_KEY = "sidebarWidth";
 
 const Sidebar = () => {
-  const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [width, setWidth] = useState(() => {
     const stored = Number(localStorage.getItem(STORAGE_KEY));
     return Number.isFinite(stored) && stored >= MIN_WIDTH && stored <= MAX_WIDTH
@@ -40,11 +39,6 @@ const Sidebar = () => {
   }, []);
 
   const sidebarStyle = useMemo(() => ({ width: `${width}px` }), [width]);
-
-  const handleLogout = useCallback(async () => {
-    await logout();
-    navigate("/login", { replace: true });
-  }, [logout, navigate]);
 
   const handleResize = useCallback((event) => {
     event.preventDefault();
@@ -102,13 +96,6 @@ const Sidebar = () => {
           delay: 0.2,
         }
       );
-
-      // Logout button fades up
-      gsap.fromTo(
-        ".sidebar-logout",
-        { y: 15, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.4, ease: "power2.out", delay: 0.5 }
-      );
     }, sidebarRef);
 
     return () => ctx.revert();
@@ -157,13 +144,6 @@ const Sidebar = () => {
             })}
           </ul>
         </nav>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="sidebar-logout mt-4 w-full rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
-        >
-          Logout
-        </button>
         <div
           role="separator"
           aria-label="Resize sidebar"

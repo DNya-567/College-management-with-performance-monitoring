@@ -2,7 +2,7 @@
 // GSAP is used for entrance and transition animations.
 // Must NOT call APIs directly, store tokens, or manage auth state.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { registerTeacher, registerStudent, registerHod } from "../api/auth.api";
 import { listDepartments } from "../api/departments.api";
@@ -352,9 +352,17 @@ const Login = () => {
               />
             </div>
             <div className="form-field space-y-2">
-              <label className="text-sm font-medium" htmlFor="password">
-                Password
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium" htmlFor="password">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-slate-400 transition hover:text-[#0052FF]"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm transition focus:border-[#0052FF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0052FF]/10"
                 id="password"

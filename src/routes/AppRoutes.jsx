@@ -2,6 +2,8 @@
 // Must NOT perform API calls, manage auth state, or implement UI logic.
 import { Routes, Route } from "react-router-dom";
 import Login from "../pages/Login";
+import ForgotPassword from "../pages/ForgotPassword";
+import ResetPassword from "../pages/ResetPassword";
 import AdminDashboard from "../pages/admin/Dashboard";
 import ManageUsers from "../pages/admin/ManageUsers";
 import ManageDepartments from "../pages/admin/ManageDepartments";
@@ -9,6 +11,7 @@ import ManageTeachers from "../pages/admin/ManageTeachers";
 import ManageStudents from "../pages/admin/ManageStudents";
 import SystemOverview from "../pages/admin/SystemOverview";
 import ManageSemesters from "../pages/admin/ManageSemesters";
+import AdminProfile from "../pages/admin/Profile";
 import TeacherDashboard from "../pages/teacher/Dashboard";
 import StudentDashboard from "../pages/student/Dashboard";
 import HodDashboard from "../pages/hod/Dashboard";
@@ -32,11 +35,17 @@ import HodClassDetails from "../pages/hod/ClassDetails";
 import HodEnrollmentRequests from "../pages/hod/EnrollmentRequests";
 import HodAnnouncements from "../pages/hod/Announcements";
 import HodPerformance from "../pages/hod/Performance";
+import TeacherManagement from "../pages/hod/Teachers";
+import TeacherSchedules from "../pages/teacher/Schedules";
+import HodSchedules from "../pages/hod/Schedules";
+import StudentSchedules from "../pages/student/Schedules";
 import NotFound from "../pages/NotFound";
 
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
+    <Route path="/forgot-password" element={<ForgotPassword />} />
+    <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/" element={<Navigate to="/login" replace />} />
     <Route path="*" element={<NotFound />} />
     <Route
@@ -92,6 +101,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute allowedRoles={["admin"]}>
           <ManageSemesters />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/profile"
+      element={
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <AdminProfile />
         </ProtectedRoute>
       }
     />
@@ -173,6 +190,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute allowedRoles={["hod"]}>
           <HodPerformance />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/hod/teachers"
+      element={
+        <ProtectedRoute allowedRoles={["hod"]}>
+          <TeacherManagement />
         </ProtectedRoute>
       }
     />
@@ -269,6 +294,30 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute allowedRoles={["student"]}>
           <StudentAnnouncements />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/teacher/schedules"
+      element={
+        <ProtectedRoute allowedRoles={["teacher"]}>
+          <TeacherSchedules />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/hod/schedules"
+      element={
+        <ProtectedRoute allowedRoles={["hod"]}>
+          <HodSchedules />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/student/schedules"
+      element={
+        <ProtectedRoute allowedRoles={["student"]}>
+          <StudentSchedules />
         </ProtectedRoute>
       }
     />
