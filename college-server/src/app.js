@@ -21,6 +21,8 @@ const semestersRoutes = require("./modules/semesters/semesters.routes");
 const reportsRoutes = require("./modules/reports/reports.routes");
 const exportsRoutes = require("./modules/exports/exports.routes");
 const importsRoutes = require("./modules/imports/imports.routes");
+const schedulesRoutes = require("./modules/schedules/schedules.routes");
+const { classRouter: schedulesClassRoutes } = require("./modules/schedules/schedules.routes");
 
 const app = express();
 
@@ -60,6 +62,8 @@ const authLimiter = rateLimit({
 });
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
+app.use("/api/auth/forgot-password", authLimiter);
+app.use("/api/auth/reset-password", authLimiter);
 
 // ── Request logger (dev only — disabled in production) ──
 if (env.isDevelopment) {
@@ -92,6 +96,8 @@ app.use("/api/semesters", semestersRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/exports", exportsRoutes);
 app.use("/api/imports", importsRoutes);
+app.use("/api/schedules", schedulesRoutes);
+app.use("/api/classes", schedulesClassRoutes);
 
 // ── 404 handler — must come AFTER all route mounts ──
 app.use((_req, res) => {

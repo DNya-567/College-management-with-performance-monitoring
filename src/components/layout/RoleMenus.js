@@ -21,6 +21,7 @@ import {
 export const roleMenus = {
   admin: [
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
+    { label: "Profile", path: "/admin/profile", icon: User },
     { label: "Manage Users", path: "/admin/users", icon: Users },
     { label: "Departments", path: "/admin/departments", icon: Building2 },
     { label: "Semesters", path: "/admin/semesters", icon: CalendarDays },
@@ -36,6 +37,7 @@ export const roleMenus = {
     { label: "My Classes", path: "/teacher/classes", icon: BookOpen },
     { label: "Enrollment Requests", path: "/teacher/requests", icon: Inbox },
     { label: "Attendance", path: "/teacher/attendance", icon: CalendarCheck },
+    { label: "Schedules", path: "/teacher/schedules", icon: CalendarDays },
   ],
   student: [
     { label: "Dashboard", path: "/student", icon: LayoutDashboard },
@@ -44,13 +46,16 @@ export const roleMenus = {
     { label: "View Marks", path: "/student/marks", icon: GraduationCap },
     { label: "Join Classes", path: "/student/join", icon: PlusCircle },
     { label: "My Classes", path: "/student/classes", icon: BookOpen },
+    { label: "Class Schedule", path: "/student/schedules", icon: CalendarDays },
   ],
   hod: [
     { label: "Dashboard", path: "/hod", icon: LayoutDashboard },
     { label: "Dept Classes", path: "/hod/classes", icon: BookOpen },
     { label: "Enrollment Requests", path: "/hod/requests", icon: Users },
+    { label: "Teachers", path: "/hod/teachers", icon: GraduationCap },
     { label: "Announcements", path: "/hod/announcements", icon: Inbox },
     { label: "Performance", path: "/hod/performance", icon: BarChart3 },
+    { label: "Schedules", path: "/hod/schedules", icon: CalendarDays },
     { label: "Profile", path: "/hod/profile", icon: User },
   ],
 };

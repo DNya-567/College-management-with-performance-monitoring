@@ -1,6 +1,7 @@
 // UI-only page for viewing the student profile.
 // Must NOT define routes or implement auth logic.
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import AttendanceHeatmap from "../../components/attendance/AttendanceHeatmap";
 import { getMyStudentProfile } from "../../api/students.api";
@@ -9,6 +10,7 @@ import { listMyAttendance } from "../../api/attendance.api";
 import Spinner from "../../components/ui/Spinner";
 import ChangePasswordCard from "../../components/ui/ChangePasswordCard";
 import { usePageAnimation } from "../../hooks/usePageAnimation";
+import { useAuth } from "../../auth/useAuth";
 
 const buildStats = (attendance) => {
   const total = attendance.length;
@@ -27,6 +29,13 @@ const StudentProfile = () => {
   const [attendanceByClass, setAttendanceByClass] = useState({});
   const [attendanceError, setAttendanceError] = useState("");
   const [selectedClassId, setSelectedClassId] = useState("");
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   const subjectTotals = useMemo(() => {
     return enrollments.map((item) => {
@@ -123,7 +132,7 @@ const StudentProfile = () => {
         )}
 
         {!loading && student && (
-          <div className="anim-item grid gap-6 lg:grid-cols-2">
+          <div className="anim-item max-w-3xl space-y-6">
             {/* Basic info card */}
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-900">
@@ -155,69 +164,84 @@ const StudentProfile = () => {
               </div>
             </section>
 
-            {/* Subject attendance totals */}
+            {/* Change Password */}
+            <div>
+              <ChangePasswordCard />
+            </div>
+
+            {/* Logout */}
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Subject attendance totals
-              </h2>
+              <h2 className="text-base font-semibold text-slate-900">Session</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Total attendance summary for each joined subject.
+                Sign out from this account safely.
               </p>
-
-              {attendanceError && (
-                <p className="mt-4 text-sm text-red-600" role="alert">
-                  {attendanceError}
-                </p>
-              )}
-
-              {!attendanceError && subjectTotals.length === 0 && (
-                <p className="mt-4 text-sm text-slate-500">
-                  No joined classes yet.
-                </p>
-              )}
-
-              {!attendanceError && subjectTotals.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  {subjectTotals.map((item) => (
-                    <div
-                      key={item.classId}
-                      className="rounded-xl border border-slate-200 px-4 py-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">
-                            {item.subjectName}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {item.className} · Year {item.year}
-                          </p>
-                        </div>
-                        <span className="text-sm font-semibold text-slate-900">
-                          {item.stats.rate}%
-                        </span>
-                      </div>
-                      <div className="mt-3 h-2 w-full rounded-full bg-slate-100">
-                        <div
-                          className="h-2 rounded-full bg-[#0052FF]"
-                          style={{ width: `${item.stats.rate}%` }}
-                        />
-                      </div>
-                      <div className="mt-2 text-xs text-slate-500">
-                        Present {item.stats.present} / {item.stats.total}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="mt-4 w-full rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Logout
+              </button>
             </section>
           </div>
         )}
 
-        {/* Change Password */}
+        {/* Subject attendance totals */}
         {!loading && student && (
-          <div className="anim-item max-w-md">
-            <ChangePasswordCard />
-          </div>
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Subject attendance totals
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Total attendance summary for each joined subject.
+            </p>
+
+            {attendanceError && (
+              <p className="mt-4 text-sm text-red-600" role="alert">
+                {attendanceError}
+              </p>
+            )}
+
+            {!attendanceError && subjectTotals.length === 0 && (
+              <p className="mt-4 text-sm text-slate-500">
+                No joined classes yet.
+              </p>
+            )}
+
+            {!attendanceError && subjectTotals.length > 0 && (
+              <div className="mt-4 space-y-3">
+                {subjectTotals.map((item) => (
+                  <div
+                    key={item.classId}
+                    className="rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">
+                          {item.subjectName}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {item.className} · Year {item.year}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-slate-900">
+                        {item.stats.rate}%
+                      </span>
+                    </div>
+                    <div className="mt-3 h-2 w-full rounded-full bg-slate-100">
+                      <div
+                        className="h-2 rounded-full bg-[#0052FF]"
+                        style={{ width: `${item.stats.rate}%` }}
+                      />
+                    </div>
+                    <div className="mt-2 text-xs text-slate-500">
+                      Present {item.stats.present} / {item.stats.total}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         )}
 
         {/* Full-width heatmap card */}

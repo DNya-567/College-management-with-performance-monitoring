@@ -1,161 +1,224 @@
-// College Management System – Database Schema
-// Use https://dbdiagram.io to visualize this file
+// ═══════════════════════════════════════════════════════════════
+// College Management System — Complete Database Schema (DBML)
+// Visualize at https://dbdiagram.io
 // Docs: https://dbml.dbdiagram.io/docs
+// Last updated: 2026-03-05
+// ═══════════════════════════════════════════════════════════════
 
 // ──────────────────────────────────────────────
 // EXTENSIONS
 // ──────────────────────────────────────────────
-// pgcrypto — gen_random_uuid() for UUID generation
+// pgcrypto — gen_random_uuid() for UUID primary keys
 
-// ──────────────────────────────────────────────
-// CORE TABLES
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════
+// 1. CORE IDENTITY & AUTH
+// ══════════════════════════════════════════════
 
 Table users {
   id UUID [pk, default: `gen_random_uuid()`]
   email VARCHAR [unique, not null]
   password_hash TEXT [not null]
   role VARCHAR [not null, note: "CHECK (role IN ('admin', 'teacher', 'student', 'hod'))"]
+  is_active BOOLEAN [default: true, note: "Account deactivation flag — blocked at login"]
   created_at TIMESTAMP [default: `now()`]
 }
 
 Table teachers {
   id UUID [pk, default: `gen_random_uuid()`]
   name TEXT [not null]
-  department_id UUID [ref: > departments.id]
-  user_id UUID [unique, not null, ref: - users.id]
+  department_id UUID [ref: > departments.id, note: "NULL until assigned to a department"]
+  user_id UUID [unique, not null, ref: - users.id, note: "1-to-1 link to users table"]
 }
 
 Table students {
   id UUID [pk, default: `gen_random_uuid()`]
   roll_no VARCHAR [not null]
   name TEXT [not null]
-  class_id UUID [ref: > classes.id]
-  year INTEGER [not null]
-  user_id UUID [unique, not null, ref: - users.id]
+  class_id UUID [ref: > classes.id, note: "Legacy home class — enrollment is via class_enrollments"]
+  year INTEGER [not null, note: "1 = First Year, 2 = Second Year, etc."]
+  user_id UUID [unique, not null, ref: - users.id, note: "1-to-1 link to users table"]
   created_at TIMESTAMP [default: `now()`]
 }
 
 Table departments {
   id UUID [pk, default: `gen_random_uuid()`]
   name TEXT [not null, unique]
-  hod_id UUID [ref: > teachers.id, note: "HOD of the department"]
+  hod_id UUID [ref: > teachers.id, note: "Head of Department — ON DELETE SET NULL"]
+
+  indexes {
+    hod_id
+  }
 }
 
-// ──────────────────────────────────────────────
-// ACADEMIC STRUCTURE
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════
+// 2. ACADEMIC STRUCTURE
+// ══════════════════════════════════════════════
 
 Table semesters {
   id UUID [pk, default: `gen_random_uuid()`]
-  name TEXT [not null]
-  academic_year TEXT [not null]
+  name TEXT [not null, note: "e.g. 'Semester 1', 'Semester 2'"]
+  academic_year TEXT [not null, note: "e.g. '2025-2026'"]
   start_date DATE [not null]
   end_date DATE [not null]
-  is_active BOOLEAN [default: false, note: "Only one active at a time"]
+  is_active BOOLEAN [default: false, note: "Only one active at a time — enforced by backend"]
   created_at TIMESTAMP [default: `now()`]
 
   indexes {
-    is_active
+    is_active [note: "Fast lookup for active semester"]
   }
 }
 
 Table subjects {
   id UUID [pk, default: `gen_random_uuid()`]
   name TEXT [not null]
-  class_id UUID [ref: > classes.id, note: "Legacy / optional FK"]
-  teacher_id UUID [ref: > teachers.id, note: "Legacy / optional FK"]
+  class_id UUID [ref: > classes.id, note: "Legacy FK — nullable"]
+  teacher_id UUID [ref: > teachers.id, note: "Legacy FK — nullable"]
 }
 
 Table classes {
   id UUID [pk, default: `gen_random_uuid()`]
-  name TEXT [not null]
+  name TEXT [not null, note: "Class/section name — teacher-defined"]
   subject_id UUID [not null, ref: > subjects.id]
   teacher_id UUID [not null, ref: > teachers.id]
   year INTEGER [not null, note: "1 = First Year, 2 = Second Year, etc."]
+
+  indexes {
+    teacher_id [note: "Fast lookup for teacher's classes"]
+  }
 }
 
-// ──────────────────────────────────────────────
-// ENROLLMENT
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════
+// 3. ENROLLMENT
+// ══════════════════════════════════════════════
 
 Table class_enrollments {
   id UUID [pk, default: `gen_random_uuid()`]
   class_id UUID [not null, ref: > classes.id]
   student_id UUID [not null, ref: > students.id]
-  semester_id UUID [ref: > semesters.id, note: "Auto-injected from active semester"]
+  semester_id UUID [ref: > semesters.id, note: "Auto-injected from active semester on creation"]
   status VARCHAR [not null, note: "CHECK (status IN ('pending', 'approved', 'rejected'))"]
 
   indexes {
-    (class_id, status)
-    (student_id, status)
-    semester_id
+    (class_id, status) [note: "Filter by class + status for enrollment queries"]
+    (student_id, status) [note: "Filter by student + status for my-classes queries"]
+    semester_id [note: "Semester scoping"]
   }
 }
 
-// ──────────────────────────────────────────────
-// MARKS
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════
+// 4. MARKS
+// ══════════════════════════════════════════════
 
 Table marks {
   id SERIAL [pk]
-  class_id UUID [ref: > classes.id, note: "Added via migration"]
+  class_id UUID [ref: > classes.id, note: "Which class this mark belongs to — ON DELETE CASCADE"]
   student_id UUID [not null, ref: > students.id]
   subject_id UUID [not null, ref: > subjects.id]
-  teacher_id UUID [not null, ref: > teachers.id]
-  semester_id UUID [ref: > semesters.id, note: "Auto-injected from active semester"]
-  score INTEGER [not null]
-  total_marks INTEGER [note: "Max marks for the exam"]
-  exam_type VARCHAR [not null, note: "'internal', 'midterm', 'final', etc."]
+  teacher_id UUID [not null, ref: > teachers.id, note: "Derived from JWT — never accepted from frontend"]
+  semester_id UUID [ref: > semesters.id, note: "Auto-injected from active semester — ON DELETE SET NULL"]
+  score INTEGER [not null, note: "Must be >= 0 and <= total_marks"]
+  total_marks INTEGER [note: "Maximum marks for the exam — required on create"]
+  exam_type VARCHAR [not null, note: "'internal', 'midterm', 'final'"]
   year INTEGER [not null]
 
   indexes {
-    student_id
-    class_id
-    exam_type
-    semester_id
-    (student_id, subject_id, exam_type, class_id, semester_id) [unique, note: "Partial — WHERE semester_id IS NOT NULL"]
+    student_id [note: "Student marks lookup"]
+    class_id [note: "Class marks lookup"]
+    exam_type [note: "Filter by exam type"]
+    semester_id [note: "Semester scoping"]
+    (student_id, subject_id, exam_type, class_id, semester_id) [unique, note: "Partial unique — WHERE semester_id IS NOT NULL"]
   }
 }
 
-// ──────────────────────────────────────────────
-// ATTENDANCE
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════
+// 5. ATTENDANCE
+// ══════════════════════════════════════════════
 
 Table attendance {
   id SERIAL [pk]
-  class_id UUID [not null, ref: > classes.id]
-  student_id UUID [not null, ref: > students.id]
-  semester_id UUID [ref: > semesters.id, note: "Auto-injected from active semester"]
-  date DATE [not null]
+  class_id UUID [not null, ref: > classes.id, note: "ON DELETE CASCADE"]
+  student_id UUID [not null, ref: > students.id, note: "ON DELETE CASCADE"]
+  semester_id UUID [ref: > semesters.id, note: "Auto-injected from active semester — ON DELETE SET NULL"]
+  date DATE [not null, note: "Sundays rejected by backend validation"]
   status TEXT [not null, note: "CHECK (status IN ('present', 'absent'))"]
 
   indexes {
-    class_id
-    (class_id, date)
-    student_id
-    semester_id
-    (class_id, student_id, date) [unique]
+    class_id [note: "Class attendance lookup"]
+    (class_id, date) [note: "Attendance for a specific date"]
+    student_id [note: "Student attendance history"]
+    semester_id [note: "Semester scoping"]
+    (class_id, student_id, date) [unique, note: "One record per student per class per day — upsert target"]
   }
 }
 
-// ──────────────────────────────────────────────
-// ANNOUNCEMENTS
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════
+// 6. ANNOUNCEMENTS
+// ══════════════════════════════════════════════
 
 Table announcements {
   id UUID [pk, default: `gen_random_uuid()`]
-  teacher_id UUID [not null, ref: > teachers.id]
-  class_id UUID [ref: > classes.id, note: "Scoped to a specific class"]
+  teacher_id UUID [not null, ref: > teachers.id, note: "ON DELETE CASCADE"]
+  class_id UUID [ref: > classes.id, note: "Scoped to a specific class — ON DELETE CASCADE"]
   title TEXT [not null]
   body TEXT [not null]
   created_at TIMESTAMP [not null, default: `now()`]
 
   indexes {
-    teacher_id
-    class_id
-    created_at
+    teacher_id [note: "Announcements by teacher"]
+    class_id [note: "Announcements for a class"]
+    created_at [note: "Chronological ordering — DESC"]
   }
 }
 
+// ══════════════════════════════════════════════
+// 7. AUDIT & LOGGING (Admin)
+// ══════════════════════════════════════════════
 
+Table audit_logs {
+  id SERIAL [pk]
+  admin_id UUID [ref: > users.id, note: "Admin who performed the action — ON DELETE SET NULL"]
+  action TEXT [not null, note: "e.g. 'reset_password', 'delete_user', 'toggle_status', 'activate_user', 'deactivate_user', 'update_teacher_department'"]
+  target_type TEXT [not null, note: "e.g. 'user', 'teacher', 'student', 'department'"]
+  target_id UUID [note: "UUID of the affected entity"]
+  details JSONB [default: `'{}'`, note: "Additional context — email, old/new values, etc."]
+  created_at TIMESTAMP [default: `now()`]
+
+  indexes {
+    admin_id [note: "Logs by admin"]
+    created_at [note: "Chronological ordering — DESC"]
+  }
+}
+
+// ══════════════════════════════════════════════
+// ARCHITECTURE NOTES
+// ══════════════════════════════════════════════
+// • HOD is a teacher with users.role = 'hod'. Their department is
+//   determined via teachers.department_id. departments.hod_id points
+//   back to the teacher who is the current HOD.
+//
+// • teacher_id in marks is NEVER accepted from the frontend.
+//   It is always derived on the backend from req.user.userId → teachers.id.
+//
+// • semester_id is auto-injected into marks, attendance, and
+//   class_enrollments from the currently active semester. Only one
+//   semester can be active at a time (enforced by backend logic).
+//
+// • The marks unique index is partial (WHERE semester_id IS NOT NULL)
+//   so legacy rows without a semester are not affected.
+//
+// • attendance uses ON CONFLICT (class_id, student_id, date) DO UPDATE
+//   to allow upsert when re-marking attendance for the same day.
+//
+// • The is_active column on users controls account deactivation.
+//   Deactivated accounts are blocked at login time.
+//
+// • audit_logs are fire-and-forget inserts — they never block the
+//   calling admin operation.
+//
+// • students.class_id is a legacy column; the actual class membership
+//   is managed through the class_enrollments table with status workflow
+//   (pending → approved / rejected).
+//
+// • subjects.class_id and subjects.teacher_id are legacy columns from
+//   the initial schema. Classes now own the subject ↔ teacher binding
+//   via classes.subject_id and classes.teacher_id.
