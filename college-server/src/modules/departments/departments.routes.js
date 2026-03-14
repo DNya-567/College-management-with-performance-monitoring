@@ -18,9 +18,10 @@ router.get(
   getTeachersByDepartment
 );
 
-// GET /api/teachers/:teacherId/performance — HOD-only: get teacher's class performance
+// GET /api/departments/:departmentId/teacher/:teacherId/performance — HOD-only: get teacher's class performance
+// Path changed to avoid conflicts with /:departmentId/teachers
 router.get(
-  "/teachers/:teacherId/performance",
+  "/:departmentId/teacher/:teacherId/performance",
   authMiddleware,
   requireRole(["hod", "admin"]),
   getTeacherPerformance

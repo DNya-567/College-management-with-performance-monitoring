@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const db = require("../../config/db");
 const env = require("../../config/env");
+const logger = require("../../config/logger");
 const { sendEmail } = require("../../utils/email");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -33,16 +34,20 @@ exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
+    logger.warn('Login attempt with missing credentials', { email });
     return res.status(400).json({ message: "Email and password are required." });
   }
 
   try {
+    logger.info('Login attempt', { email, ip: req.ip, correlationId: req.correlationId });
+
     const result = await db.query(
       "SELECT id, email, role, password_hash, is_active FROM users WHERE email = $1",
       [email]
     );
 
     if (result.rowCount === 0) {
+      logger.warn('Login failed - user not found', { email, ip: req.ip });
       return res.status(401).json({ message: "Invalid credentials." });
     }
 
@@ -50,16 +55,19 @@ exports.login = async (req, res) => {
 
     // Block deactivated accounts
     if (user.is_active === false) {
+      logger.warn('Login attempt on deactivated account', { userId: user.id, email, ip: req.ip });
       return res.status(403).json({ message: "Account is deactivated. Contact admin." });
     }
 
     const isValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isValid) {
+      logger.warn('Login failed - invalid password', { userId: user.id, email, ip: req.ip });
       return res.status(401).json({ message: "Invalid credentials." });
     }
 
     if (!process.env.JWT_SECRET) {
+      logger.error('JWT_SECRET not configured', { email });
       return res.status(500).json({ message: "Server misconfiguration." });
     }
 
@@ -71,12 +79,20 @@ exports.login = async (req, res) => {
       { expiresIn: env.JWT_EXPIRES_IN }
     );
 
+    logger.info('Login successful', {
+      userId: user.id,
+      email,
+      role: normalizedRole,
+      ip: req.ip,
+      correlationId: req.correlationId
+    });
+
     return res.json({
       token,
       user: { id: user.id, email: user.email, role: normalizedRole },
     });
   } catch (error) {
-    console.error("Auth login error:", error);
+    logger.logError(error, { email, step: 'login', correlationId: req.correlationId });
     return res.status(500).json({ message: "Internal server error." });
   }
 };

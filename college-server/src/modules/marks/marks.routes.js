@@ -13,11 +13,13 @@ const {
 } = require("./marks.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
+const { validate, createMarkSchema, updateMarkSchema } = require("../../utils/validation");
 
 router.post(
   "/classes/:classId/marks",
   authMiddleware,
   requireRole(["teacher"]),
+  validate(createMarkSchema),
   createClassMark
 );
 router.get(
@@ -61,6 +63,7 @@ router.put(
   "/marks/:id",
   authMiddleware,
   requireRole(["teacher"]),
+  validate(updateMarkSchema),
   updateMark
 );
 

@@ -76,7 +76,7 @@ const TeacherManagement = () => {
     setPerfLoading(true);
 
     try {
-      const res = await getTeacherPerformance(teacherId);
+      const res = await getTeacherPerformance(departmentId, teacherId);
       setTeacherPerf(res.data?.classes || []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load performance.");

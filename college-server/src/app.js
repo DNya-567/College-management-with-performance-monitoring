@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const env = require("./config/env");
+const logger = require("./config/logger");
 
 const authRoutes = require("./modules/auth/auth.routes");
 const marksRoutes = require("./modules/marks/marks.routes");
@@ -28,6 +29,17 @@ const app = express();
 
 // ── Security headers (XSS, clickjacking, MIME-sniffing protection) ──
 app.use(helmet());
+
+// ── Correlation ID for request tracing ──
+const { v4: uuidv4 } = require('uuid');
+app.use((req, res, next) => {
+  req.correlationId = req.headers['x-correlation-id'] || uuidv4();
+  res.setHeader('x-correlation-id', req.correlationId);
+  next();
+});
+
+// ── Request/Response logging ──
+app.use(logger.logRequest);
 
 // ── CORS — read allowed origins from env instead of hardcoding ──
 const allowedOrigins = env.CORS_ORIGINS.split(",").map((o) => o.trim());
@@ -107,11 +119,18 @@ app.use((_req, res) => {
 // ── Global error handler — must be the LAST middleware ──
 // Express identifies error handlers by their 4-argument signature (err, req, res, next).
 // Catches any unhandled throw/next(err) so the server never crashes silently.
-app.use((err, _req, res, _next) => {
-  console.error("Unhandled error:", err.stack || err.message || err);
+app.use((err, req, res, _next) => {
+  logger.logError(err, {
+    method: req.method,
+    path: req.path,
+    correlationId: req.correlationId,
+    userId: req.user?.userId || 'anonymous',
+  });
+
   const status = err.status || err.statusCode || 500;
   res.status(status).json({
     message: env.isProduction ? "Internal server error." : err.message,
+    correlationId: req.correlationId,
   });
 });
 

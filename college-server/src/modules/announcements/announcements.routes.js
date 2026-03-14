@@ -12,6 +12,7 @@ const {
 } = require("./announcements.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
+const { validate, createAnnouncementSchema } = require("../../utils/validation");
 
 // GET /api/announcements — all announcements relevant to the current user
 router.get(
@@ -26,6 +27,7 @@ classRouter.post(
   "/:classId/announcements",
   authMiddleware,
   requireRole(["teacher", "hod"]),
+  validate(createAnnouncementSchema),
   createAnnouncement
 );
 

@@ -273,6 +273,52 @@ async function seedSubjects() {
   return subjects;
 }
 
+/**
+ * Create a dedicated HOD user with full department context
+ * This HOD will have classes with students, marks, and attendance for testing
+ */
+async function createDedicatedHOD(firstDepartment, subjects) {
+  console.log("🌱 Seeding dedicated HOD user...");
+
+  const hodName = "Dr. Sarah Anderson";
+  const hodEmail = "hod@college.com";
+  const hodPassword = "hod123456";
+  const hodHash = await hashPassword(hodPassword);
+
+  // Create HOD user with "hod" role
+  const hodUserResult = await query(
+    `INSERT INTO users (email, password_hash, role, is_active)
+     VALUES ($1, $2, $3, true)
+     RETURNING id, email, role`,
+    [hodEmail, hodHash, "hod"]
+  );
+
+  // Create HOD teacher profile linked to first department
+  const hodTeacherResult = await query(
+    `INSERT INTO teachers (name, user_id, department_id)
+     VALUES ($1, $2, $3)
+     RETURNING id, name`,
+    [hodName, hodUserResult[0].id, firstDepartment.id]
+  );
+
+  // Assign HOD to department
+  await query(
+    `UPDATE departments SET hod_id = $1 WHERE id = $2`,
+    [hodTeacherResult[0].id, firstDepartment.id]
+  );
+
+  console.log(`  ✓ HOD: ${hodName} - ${hodEmail} (${firstDepartment.name})`);
+
+  return {
+    id: hodTeacherResult[0].id,
+    user_id: hodUserResult[0].id,
+    name: hodName,
+    email: hodEmail,
+    password: hodPassword,
+    department_id: firstDepartment.id,
+  };
+}
+
 async function seedTeachersAndClasses(departments, subjects) {
   console.log("🌱 Seeding teachers and classes...");
 
@@ -322,16 +368,7 @@ async function seedTeachersAndClasses(departments, subjects) {
         name,
       });
 
-      // Set teacher as HOD for first teacher in each department
-      if (i === 0) {
-        await query(
-          `UPDATE departments SET hod_id = $1 WHERE id = $2`,
-          [teacherResult[0].id, dept.id]
-        );
-        console.log(`  ✓ Teacher (HOD): ${name} - ${email}`);
-      } else {
-        console.log(`  ✓ Teacher: ${name} - ${email}`);
-      }
+      console.log(`  ✓ Teacher: ${name} - ${email}`);
 
       // Create classes for this teacher
       for (let j = 0; j < SEED_CONFIG.classesPerTeacher; j++) {
@@ -648,6 +685,208 @@ async function seedClassSchedules(classes, teachers) {
   console.log(`  ✓ Created ${scheduleCount} class schedules`);
 }
 
+/**
+ * Create HOD classes with full data (marks, attendance, etc)
+ * so HOD can test all features immediately
+ */
+async function seedHODClasses(hodTeacher, subjects, activeSemester) {
+  console.log("🌱 Seeding HOD classes with test data...");
+
+  const hodClasses = [];
+  let subjectIndex = 0;
+
+  // Create 3 classes for the HOD with realistic data
+  for (let i = 0; i < 3; i++) {
+    const subject = subjects[subjectIndex % subjects.length];
+    const year = i + 1; // Year 1, 2, 3
+    const className = `${subject.name} - Advanced ${String.fromCharCode(65 + i)}`;
+
+    const classResult = await query(
+      `INSERT INTO classes (name, subject_id, teacher_id, year)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, name`,
+      [className, subject.id, hodTeacher.id, year]
+    );
+
+    hodClasses.push({
+      id: classResult[0].id,
+      name: classResult[0].name,
+      subject_id: subject.id,
+      teacher_id: hodTeacher.id,
+      year,
+    });
+
+    subjectIndex++;
+  }
+
+  console.log(`  ✓ Created ${hodClasses.length} classes for HOD`);
+  return hodClasses;
+}
+
+/**
+ * Create students for HOD classes
+ */
+async function seedHODStudents(hodClasses) {
+  console.log("🌱 Seeding students for HOD classes...");
+
+  const students = [];
+  const firstNames = [
+    "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry",
+    "Ivy", "Jack", "Karen", "Leo",
+  ];
+  const lastNames = [
+    "Anderson", "Bailey", "Clark", "Davis", "Evans", "Foster",
+  ];
+
+  let studentCount = 1;
+
+  for (const cls of hodClasses) {
+    // 12 students per HOD class
+    for (let i = 0; i < 12; i++) {
+      const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+      const name = `${firstName} ${lastName}`;
+      const rollNo = `HOD-STU${String(studentCount).padStart(4, "0")}`;
+      const email = `hod-student${studentCount}@college.com`;
+
+      const userResult = await query(
+        `INSERT INTO users (email, password_hash, role, is_active)
+         VALUES ($1, $2, $3, true)
+         RETURNING id`,
+        [email, await hashPassword("pass123"), "student"]
+      );
+
+      const studentResult = await query(
+        `INSERT INTO students (name, roll_no, user_id, class_id, year)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id`,
+        [name, rollNo, userResult[0].id, cls.id, cls.year]
+      );
+
+      students.push({
+        id: studentResult[0].id,
+        class_id: cls.id,
+      });
+
+      studentCount++;
+    }
+  }
+
+  console.log(`  ✓ Created ${students.length} students for HOD classes`);
+  return students;
+}
+
+/**
+ * Create enrollments for HOD students
+ */
+async function seedHODEnrollments(hodClasses, hodStudents, activeSemester) {
+  console.log("🌱 Seeding HOD class enrollments...");
+
+  let enrollmentCount = 0;
+
+  for (const cls of hodClasses) {
+    const classStudents = hodStudents.filter((s) => s.class_id === cls.id);
+
+    for (const student of classStudents) {
+      // 95% approved for HOD (mostly for viewing)
+      const status = Math.random() < 0.95 ? "approved" : "pending";
+
+      await query(
+        `INSERT INTO class_enrollments (class_id, student_id, semester_id, status)
+         VALUES ($1, $2, $3, $4)`,
+        [cls.id, student.id, activeSemester.id, status]
+      );
+
+      enrollmentCount++;
+    }
+  }
+
+  console.log(`  ✓ Created ${enrollmentCount} HOD class enrollments`);
+}
+
+/**
+ * Create marks for HOD students
+ */
+async function seedHODMarks(hodClasses, hodStudents, hodTeacher, activeSemester, subjects) {
+  console.log("🌱 Seeding HOD class marks...");
+
+  let markCount = 0;
+  const examTypes = ["internal", "midterm", "final"];
+
+  for (const cls of hodClasses) {
+    const classStudents = hodStudents.filter((s) => s.class_id === cls.id);
+    const subject = subjects.find((s) => s.id === cls.subject_id);
+
+    for (const examType of examTypes) {
+      for (const student of classStudents) {
+        // Varied marks to show different performance levels
+        const score = randomInt(40, 95);
+        const totalMarks = 100;
+
+        await query(
+          `INSERT INTO marks (class_id, student_id, subject_id, teacher_id, semester_id, score, total_marks, exam_type, year)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            cls.id,
+            student.id,
+            cls.subject_id,
+            hodTeacher.id,
+            activeSemester.id,
+            score,
+            totalMarks,
+            examType,
+            cls.year,
+          ]
+        );
+
+        markCount++;
+      }
+    }
+  }
+
+  console.log(`  ✓ Created ${markCount} HOD class mark entries`);
+}
+
+/**
+ * Create attendance for HOD students
+ */
+async function seedHODAttendance(hodClasses, hodStudents, activeSemester) {
+  console.log("🌱 Seeding HOD class attendance...");
+
+  let attendanceCount = 0;
+  const startDate = new Date(2025, 6, 1); // Jul 1, 2025
+  const endDate = new Date(2025, 8, 30); // Sep 30, 2025
+
+  for (const cls of hodClasses) {
+    const classStudents = hodStudents.filter((s) => s.class_id === cls.id);
+
+    // Generate 30 attendance records per class
+    for (let i = 0; i < 30; i++) {
+      const attDate = randomDate(startDate, endDate);
+      // Skip Sundays
+      if (attDate.getDay() === 0) {
+        continue;
+      }
+
+      for (const student of classStudents) {
+        // 85% present for HOD demo
+        const status = Math.random() < 0.85 ? "present" : "absent";
+
+        await query(
+          `INSERT INTO attendance (class_id, student_id, semester_id, date, status)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (class_id, student_id, date) DO UPDATE SET status = $5`,
+          [cls.id, student.id, activeSemester.id, formatDate(attDate), status]
+        );
+
+        attendanceCount++;
+      }
+    }
+  }
+
+  console.log(`  ✓ Created ${attendanceCount} HOD class attendance records`);
+}
+
 // ──────────────────────────────────────────────
 // MAIN SEED FUNCTION
 // ──────────────────────────────────────────────
@@ -690,6 +929,16 @@ async function seed() {
     const departments = await seedDepartments();
     const semesters = await seedSemesters();
     const subjects = await seedSubjects();
+
+    // Create dedicated HOD for testing HOD features
+    const hodUser = await createDedicatedHOD(departments[0], subjects);
+    userDocs.push({
+      email: hodUser.email,
+      password: hodUser.password,
+      role: "hod",
+      name: hodUser.name,
+    });
+
     const { teachers, classes, teacherUserDocs } = await seedTeachersAndClasses(
       departments,
       subjects
@@ -705,6 +954,13 @@ async function seed() {
     await seedAttendance(classes, students, semesters[1]);
     await seedAnnouncements(classes, teachers);
     await seedClassSchedules(classes, teachers);
+
+    // Create HOD test data
+    const hodClasses = await seedHODClasses(hodUser, subjects, semesters[1]);
+    const hodStudents = await seedHODStudents(hodClasses);
+    await seedHODEnrollments(hodClasses, hodStudents, semesters[1]);
+    await seedHODMarks(hodClasses, hodStudents, hodUser, semesters[1], subjects);
+    await seedHODAttendance(hodClasses, hodStudents, semesters[1]);
 
     // Print summary
     console.log("\n╔════════════════════════════════════════════════════════════════╗");
