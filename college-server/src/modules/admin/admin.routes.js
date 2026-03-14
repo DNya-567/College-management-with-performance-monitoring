@@ -21,6 +21,9 @@ const {
   deleteUser,
   updateTeacherDepartment,
   getAuditLogs,
+  createIndexes,
+  listIndexes,
+  getIndexStats,
 } = require("./admin.controller");
 
 // All admin routes require authentication + admin role
@@ -57,6 +60,13 @@ router.post("/departments", createDepartment);
 router.put("/departments/:id", updateDepartment);
 router.delete("/departments/:id", deleteDepartment);
 router.put("/departments/:id/hod", assignHod);
+
+// Database Index Management (CRITICAL for production)
+// POST to create all indexes (safe to run multiple times)
+// GET to list or view stats
+router.post("/indexes/create", createIndexes);
+router.get("/indexes/list", listIndexes);
+router.get("/indexes/stats", getIndexStats);
 
 module.exports = router;
 

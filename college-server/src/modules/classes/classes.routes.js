@@ -14,11 +14,13 @@ const {
 } = require("../enrollments/enrollments.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
+const { validate, createClassSchema } = require("../../utils/validation");
 
 router.post(
   "/",
   authMiddleware,
   requireRole(["teacher"]),
+  validate(createClassSchema),
   createClass
 );
 router.get(

@@ -13,11 +13,13 @@ const {
 } = require("./attendance.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
+const { validate, markAttendanceSchema } = require("../../utils/validation");
 
 router.post(
   "/classes/:classId/attendance",
   authMiddleware,
   requireRole(["teacher"]),
+  validate(markAttendanceSchema),
   createAttendance
 );
 router.get(

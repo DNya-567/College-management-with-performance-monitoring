@@ -1,6 +1,7 @@
 // Enrollments controller: database logic for class enrollments only.
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
+const logger = require("../../config/logger");
 const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
 const { getActiveSemester } = require("../../utils/getActiveSemester");
 
@@ -120,10 +121,26 @@ exports.approveEnrollment = async (req, res) => {
       );
 
       if (result.rowCount === 0) {
+        logger.warn('Enrollment approval failed - not found', {
+          enrollmentId: id,
+          departmentId,
+          approvedBy: userId,
+          correlationId: req.correlationId
+        });
         return res.status(404).json({ message: "Enrollment not found." });
       }
 
-      return res.json({ enrollment: result.rows[0] });
+      const enrollment = result.rows[0];
+      logger.info('Enrollment approved', {
+        enrollmentId: enrollment.id,
+        studentId: enrollment.student_id,
+        classId: enrollment.class_id,
+        approvedBy: userId,
+        approverRole: 'hod',
+        correlationId: req.correlationId
+      });
+
+      return res.json({ enrollment });
     }
 
     const teacherId = await getTeacherId(userId);
@@ -140,12 +157,33 @@ exports.approveEnrollment = async (req, res) => {
     );
 
     if (result.rowCount === 0) {
+      logger.warn('Enrollment approval failed - not found', {
+        enrollmentId: id,
+        teacherId,
+        approvedBy: userId,
+        correlationId: req.correlationId
+      });
       return res.status(404).json({ message: "Enrollment not found." });
     }
 
-    return res.json({ enrollment: result.rows[0] });
+    const enrollment = result.rows[0];
+    logger.info('Enrollment approved', {
+      enrollmentId: enrollment.id,
+      studentId: enrollment.student_id,
+      classId: enrollment.class_id,
+      approvedBy: userId,
+      approverRole: 'teacher',
+      correlationId: req.correlationId
+    });
+
+    return res.json({ enrollment });
   } catch (error) {
-    console.error("Approve enrollment error:", error);
+    logger.logError(error, {
+      step: 'approveEnrollment',
+      enrollmentId: id,
+      approvedBy: userId,
+      correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -177,10 +215,26 @@ exports.rejectEnrollment = async (req, res) => {
       );
 
       if (result.rowCount === 0) {
+        logger.warn('Enrollment rejection failed - not found', {
+          enrollmentId: id,
+          departmentId,
+          rejectedBy: userId,
+          correlationId: req.correlationId
+        });
         return res.status(404).json({ message: "Enrollment not found." });
       }
 
-      return res.json({ enrollment: result.rows[0] });
+      const enrollment = result.rows[0];
+      logger.info('Enrollment rejected', {
+        enrollmentId: enrollment.id,
+        studentId: enrollment.student_id,
+        classId: enrollment.class_id,
+        rejectedBy: userId,
+        rejectorRole: 'hod',
+        correlationId: req.correlationId
+      });
+
+      return res.json({ enrollment });
     }
 
     const teacherId = await getTeacherId(userId);
@@ -197,12 +251,33 @@ exports.rejectEnrollment = async (req, res) => {
     );
 
     if (result.rowCount === 0) {
+      logger.warn('Enrollment rejection failed - not found', {
+        enrollmentId: id,
+        teacherId,
+        rejectedBy: userId,
+        correlationId: req.correlationId
+      });
       return res.status(404).json({ message: "Enrollment not found." });
     }
 
-    return res.json({ enrollment: result.rows[0] });
+    const enrollment = result.rows[0];
+    logger.info('Enrollment rejected', {
+      enrollmentId: enrollment.id,
+      studentId: enrollment.student_id,
+      classId: enrollment.class_id,
+      rejectedBy: userId,
+      rejectorRole: 'teacher',
+      correlationId: req.correlationId
+    });
+
+    return res.json({ enrollment });
   } catch (error) {
-    console.error("Reject enrollment error:", error);
+    logger.logError(error, {
+      step: 'rejectEnrollment',
+      enrollmentId: id,
+      rejectedBy: userId,
+      correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };

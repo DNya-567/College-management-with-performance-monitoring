@@ -608,3 +608,104 @@ exports.getAuditLogs = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/admin/indexes/create
+ * Creates all production database indexes
+ * CRITICAL: Run once on first deployment
+ * Safe to run multiple times (indexes have IF NOT EXISTS)
+ */
+exports.createIndexes = async (req, res) => {
+  const logger = require("../../config/logger");
+  const { applyIndexes } = require("../../utils/indexing");
+
+  try {
+    logger.info('Admin triggered database indexing');
+    const result = await applyIndexes();
+
+    logger.info('Database indexing completed', {
+      created: result.created,
+      skipped: result.skipped
+    });
+
+    return res.json({
+      message: 'Database indexes created successfully',
+      created: result.created,
+      skipped: result.skipped,
+      total: result.created + result.skipped
+    });
+  } catch (error) {
+    logger.logError(error, {
+      step: 'createIndexes',
+      action: 'admin_indexing'
+    });
+    return res.status(500).json({ message: "Failed to create indexes." });
+  }
+};
+
+/**
+ * GET /api/admin/indexes/list
+ * Lists all existing database indexes
+ */
+exports.listIndexes = async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT
+        indexname,
+        tablename,
+        indexdef
+      FROM pg_indexes
+      WHERE schemaname = 'public' AND indexname LIKE 'idx_%'
+      ORDER BY tablename, indexname
+    `);
+
+    return res.json({
+      total: result.rows.length,
+      indexes: result.rows
+    });
+  } catch (error) {
+    console.error("List indexes error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+/**
+ * GET /api/admin/indexes/stats
+ * Returns index usage statistics
+ * Shows which indexes are being used and how effective they are
+ */
+exports.getIndexStats = async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT
+        schemaname,
+        tablename,
+        indexname,
+        idx_scan as scans,
+        idx_tup_read as tuples_read,
+        idx_tup_fetch as tuples_fetched,
+        pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+      FROM pg_stat_user_indexes
+      WHERE schemaname = 'public' AND indexname LIKE 'idx_%'
+      ORDER BY idx_scan DESC
+    `);
+
+    // Calculate total index size
+    const totalSize = await db.query(`
+      SELECT
+        pg_size_pretty(SUM(pg_relation_size(indexrelid))) as total_size
+      FROM pg_stat_user_indexes
+      WHERE schemaname = 'public' AND indexname LIKE 'idx_%'
+    `);
+
+    return res.json({
+      total_indexes: result.rows.length,
+      total_size: totalSize.rows[0]?.total_size || '0 bytes',
+      indexes: result.rows
+    });
+  } catch (error) {
+    console.error("Index stats error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+

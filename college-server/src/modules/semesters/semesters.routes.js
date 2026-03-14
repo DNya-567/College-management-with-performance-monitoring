@@ -4,6 +4,7 @@
 const router = require("express").Router();
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
+const { validate, createSemesterSchema } = require("../../utils/validation");
 const {
   listSemesters,
   getActiveSemester,
@@ -21,8 +22,8 @@ router.get("/", listSemesters);
 router.get("/active", getActiveSemester);
 
 // Admin-only write operations
-router.post("/", requireRole(["admin"]), createSemester);
-router.put("/:id", requireRole(["admin"]), updateSemester);
+router.post("/", requireRole(["admin"]), validate(createSemesterSchema), createSemester);
+router.put("/:id", requireRole(["admin"]), validate(createSemesterSchema), updateSemester);
 router.delete("/:id", requireRole(["admin"]), deleteSemester);
 router.put("/:id/activate", requireRole(["admin"]), setActiveSemester);
 

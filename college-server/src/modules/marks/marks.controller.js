@@ -1,6 +1,7 @@
 // Marks controller: database CRUD for marks only.
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
+const logger = require("../../config/logger");
 const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
 const { getActiveSemester } = require("../../utils/getActiveSemester");
 
@@ -9,28 +10,46 @@ exports.createMark = async (req, res) => {
   const teacherUserId = req.user?.userId;
 
   if (!student_id || !subject_id || score === undefined || total_marks === undefined || !exam_type || !year) {
+    logger.warn('Mark creation failed - missing fields', {
+      student_id, subject_id, exam_type, correlationId: req.correlationId
+    });
     return res.status(400).json({ message: "Missing required fields." });
   }
 
   if (Number(score) < 0 || Number(total_marks) <= 0) {
+    logger.warn('Mark creation failed - invalid score/total', {
+      score, total_marks, correlationId: req.correlationId
+    });
     return res.status(400).json({ message: "Score and total marks must be positive numbers." });
   }
 
   if (Number(score) > Number(total_marks)) {
+    logger.warn('Mark creation failed - score exceeds total', {
+      score, total_marks, correlationId: req.correlationId
+    });
     return res.status(400).json({ message: "Score cannot exceed total marks." });
   }
 
   if (!teacherUserId) {
+    logger.warn('Mark creation failed - unauthorized', { correlationId: req.correlationId });
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
+    logger.info('Creating mark', {
+      student_id, subject_id, score, total_marks, exam_type, year,
+      teacherUserId, correlationId: req.correlationId
+    });
+
     const teacherRes = await db.query(
       "SELECT id FROM teachers WHERE user_id = $1",
       [teacherUserId]
     );
 
     if (teacherRes.rowCount === 0) {
+      logger.warn('Mark creation failed - teacher not found', {
+        teacherUserId, correlationId: req.correlationId
+      });
       return res.status(403).json({ message: "Teacher profile not found." });
     }
 
@@ -43,9 +62,17 @@ exports.createMark = async (req, res) => {
       [student_id, subject_id, teacherId, score, total_marks, exam_type, year, semesterId]
     );
 
+    logger.info('Mark created successfully', {
+      markId: result.rows[0].id, student_id, subject_id, score,
+      correlationId: req.correlationId
+    });
+
     return res.status(201).json({ mark: result.rows[0] });
   } catch (error) {
-    console.error("Create mark error:", error);
+    logger.logError(error, {
+      student_id, subject_id, score, exam_type,
+      step: 'createMark', correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };
