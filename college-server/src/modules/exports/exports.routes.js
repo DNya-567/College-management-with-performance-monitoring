@@ -1,6 +1,7 @@
 // Exports routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
 const router = require("express").Router();
+const asyncHandler = require("../../utils/asyncHandler");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
 const {
@@ -14,14 +15,14 @@ router.get(
   "/marks/:classId",
   authMiddleware,
   requireRole(["teacher"]),
-  exportClassMarks
+  asyncHandler(exportClassMarks)
 );
 
 router.get(
   "/attendance/:classId",
   authMiddleware,
   requireRole(["teacher"]),
-  exportClassAttendance
+  asyncHandler(exportClassAttendance)
 );
 
 // HOD: export department-wide performance
@@ -29,7 +30,7 @@ router.get(
   "/department/:deptId",
   authMiddleware,
   requireRole(["hod"]),
-  exportDepartmentPerformance
+  asyncHandler(exportDepartmentPerformance)
 );
 
 module.exports = router;

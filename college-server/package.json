@@ -8,6 +8,8 @@
     "dev": "nodemon src/server.js",
     "seed": "node seed.js",
     "seed:admin": "node src/scripts/seedAdmin.js",
+    "apply-indexes": "node apply-indexes-safe.js",
+    "verify-indexes": "node verify-indexes.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -102,7 +102,28 @@ const TeacherManagement = () => {
         {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
 
         {!loading && departmentId && (
-          <div className="grid gap-6 lg:grid-cols-3">
+          <>
+            {/* Semester Selector */}
+            {semesters.length > 0 && (
+              <div className="anim-item rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Select Semester
+                </label>
+                <select
+                  value={selectedSemesterId}
+                  onChange={(e) => setSelectedSemesterId(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
+                >
+                  {semesters.map((sem) => (
+                    <option key={sem.id} value={sem.id}>
+                      {sem.name} ({sem.academic_year})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="grid gap-6 lg:grid-cols-3">
             {/* Teachers List */}
             <section className="anim-item rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-1">
               <div className="flex items-center gap-2 mb-4">
@@ -183,25 +204,25 @@ const TeacherManagement = () => {
                                 {cls.enrolled_students}
                               </td>
                               <td className="py-3 px-3 text-center font-medium text-slate-900">
-                                {cls.avg_marks !== null ? cls.avg_marks.toFixed(2) : "—"}
+                                {cls.avg_marks !== null ? Number(cls.avg_marks).toFixed(2) : "—"}
                               </td>
                               <td className="py-3 px-3 text-center">
                                 <span className="font-medium">
-                                  {cls.avg_percentage !== null ? `${cls.avg_percentage.toFixed(1)}%` : "—"}
+                                  {cls.avg_percentage !== null ? `${Number(cls.avg_percentage).toFixed(1)}%` : "—"}
                                 </span>
                               </td>
                               <td className="py-3 px-3 text-center">
                                 <span
                                   className={[
                                     "font-medium",
-                                    cls.avg_attendance_pct >= 75
+                                    Number(cls.avg_attendance_pct) >= 75
                                       ? "text-emerald-600"
-                                      : cls.avg_attendance_pct >= 50
+                                      : Number(cls.avg_attendance_pct) >= 50
                                       ? "text-amber-600"
                                       : "text-red-600",
                                   ].join(" ")}
                                 >
-                                  {cls.avg_attendance_pct !== null ? `${cls.avg_attendance_pct.toFixed(1)}%` : "—"}
+                                  {cls.avg_attendance_pct !== null ? `${Number(cls.avg_attendance_pct).toFixed(1)}%` : "—"}
                                 </span>
                               </td>
                             </tr>
@@ -224,8 +245,10 @@ const TeacherManagement = () => {
                         <p className="text-xs text-slate-500">Avg Student Score</p>
                         <p className="text-lg font-semibold text-slate-900">
                           {(
-                            teacherPerf.reduce((sum, c) => sum + (c.avg_marks || 0), 0) /
-                            teacherPerf.length
+                            teacherPerf.reduce((sum, c) => {
+                              const marks = c.avg_marks ? Number(c.avg_marks) : 0;
+                              return sum + marks;
+                            }, 0) / teacherPerf.length
                           ).toFixed(1)}
                         </p>
                       </div>
@@ -233,8 +256,10 @@ const TeacherManagement = () => {
                         <p className="text-xs text-slate-500">Avg Attendance</p>
                         <p className="text-lg font-semibold text-slate-900">
                           {(
-                            teacherPerf.reduce((sum, c) => sum + (c.avg_attendance_pct || 0), 0) /
-                            teacherPerf.length
+                            teacherPerf.reduce((sum, c) => {
+                              const attendance = c.avg_attendance_pct ? Number(c.avg_attendance_pct) : 0;
+                              return sum + attendance;
+                            }, 0) / teacherPerf.length
                           ).toFixed(1)}
                           %
                         </p>
@@ -251,6 +276,7 @@ const TeacherManagement = () => {
               )}
             </section>
           </div>
+            </>
         )}
       </div>
     </DashboardLayout>

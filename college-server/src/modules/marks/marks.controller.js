@@ -4,6 +4,7 @@ const db = require("../../config/db");
 const logger = require("../../config/logger");
 const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
 const { getActiveSemester } = require("../../utils/getActiveSemester");
+const { formatPaginatedResponse } = require("../../utils/pagination");
 
 exports.createMark = async (req, res) => {
   const { student_id, subject_id, score, total_marks, exam_type, year } = req.body;
@@ -106,7 +107,9 @@ exports.listMarks = async (req, res) => {
 
     return res.json({ marks: result.rows });
   } catch (error) {
-    console.error("List marks error:", error);
+    logger.logError(error, {
+      step: 'listMarks', correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -126,7 +129,9 @@ exports.getMarkById = async (req, res) => {
 
     return res.json({ mark: result.rows[0] });
   } catch (error) {
-    console.error("Get mark error:", error);
+    logger.logError(error, {
+      markId: id, step: 'getMarkById', correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -167,7 +172,9 @@ exports.getSubjectDifficulty = async (req, res) => {
 
     return res.json({ subjects: result.rows });
   } catch (error) {
-    console.error("Subject difficulty error:", error);
+    logger.logError(error, {
+      role, userId, step: 'getSubjectDifficulty', correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -175,6 +182,7 @@ exports.getSubjectDifficulty = async (req, res) => {
 exports.listMyMarks = async (req, res) => {
   const userId = req.user?.userId;
   const { semester_id } = req.query;
+  const { limit, offset } = req.pagination;
 
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -193,26 +201,46 @@ exports.listMyMarks = async (req, res) => {
       semId = activeSem ? activeSem.id : null;
     }
 
-    const params = [studentId];
+    // Count query
+    const countParams = [studentId];
     let semFilter = "";
     if (semId) {
-      params.push(semId);
-      semFilter = ` AND (m.semester_id = $${params.length} OR m.semester_id IS NULL)`;
+      countParams.push(semId);
+      semFilter = ` AND (m.semester_id = $${countParams.length} OR m.semester_id IS NULL)`;
     }
+
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total FROM marks m WHERE m.student_id = $1${semFilter}`,
+      countParams
+    );
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    // Data query with pagination
+    const dataParams = [studentId];
+    let dataFilter = "";
+    if (semId) {
+      dataParams.push(semId);
+      dataFilter = ` AND (m.semester_id = $${dataParams.length} OR m.semester_id IS NULL)`;
+    }
+    dataParams.push(limit, offset);
 
     const result = await db.query(
       `SELECT m.id, s.name AS subject_name, t.name AS teacher_name, m.score, m.total_marks, m.exam_type, m.year, m.semester_id
        FROM marks m
        JOIN subjects s ON s.id = m.subject_id
        JOIN teachers t ON t.id = m.teacher_id
-       WHERE m.student_id = $1${semFilter}
-       ORDER BY m.year DESC`,
-      params
+       WHERE m.student_id = $1${dataFilter}
+       ORDER BY m.year DESC
+       LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`,
+      dataParams
     );
 
-    return res.json({ marks: result.rows });
+    return res.json(formatPaginatedResponse(result.rows, total, limit, offset));
   } catch (error) {
-    console.error("List my marks error:", error);
+    logger.logError(error, {
+      userId, semester_id, step: 'listMyMarks',
+      correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -274,7 +302,9 @@ exports.updateMark = async (req, res) => {
 
     return res.json({ mark: result.rows[0] });
   } catch (error) {
-    console.error("Update mark error:", error);
+    logger.logError(error, {
+      markId: id, score, total_marks, step: 'updateMark', correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -338,7 +368,18 @@ exports.createClassMark = async (req, res) => {
 
     return res.status(201).json({ mark: result.rows[0] });
   } catch (error) {
-    console.error("Create class mark error:", error);
+    // Handle duplicate mark constraint
+    if (error.code === '23505' && error.constraint && error.constraint.includes('unique')) {
+      logger.warn('Duplicate mark attempted', {
+        classId, student_id, subject_id, error: error.message,
+        step: 'createClassMark', correlationId: req.correlationId
+      });
+      return res.status(409).json({ message: "Mark already exists for this student/subject/class. Use PUT to update instead." });
+    }
+
+    logger.logError(error, {
+      classId, student_id, subject_id, step: 'createClassMark', correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -409,7 +450,9 @@ exports.listMarksByClass = async (req, res) => {
 
     return res.json({ marks: result.rows });
   } catch (error) {
-    console.error("List class marks error:", error);
+    logger.logError(error, {
+      classId: req.params.classId, step: 'listClassMarks', correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -449,7 +492,9 @@ exports.listMyMarksByClass = async (req, res) => {
 
     return res.json({ marks: result.rows });
   } catch (error) {
-    console.error("List my class marks error:", error);
+    logger.logError(error, {
+      classId: req.params.classId, step: 'listMyClassMarks', correlationId: req.correlationId
+    });
     return res.status(500).json({ message: "Internal server error." });
   }
 };

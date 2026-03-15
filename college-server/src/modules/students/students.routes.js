@@ -1,28 +1,29 @@
 // Students routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
 const router = require("express").Router();
+const asyncHandler = require("../../utils/asyncHandler");
 const {
-  createStudent,
   listStudents,
   getStudentById,
   getMyProfile,
 } = require("./students.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
+const { validatePagination } = require("../../utils/pagination");
 
-router.post("/", createStudent);
 router.get(
   "/",
   authMiddleware,
   requireRole(["teacher", "admin", "hod"]),
-  listStudents
+  validatePagination,
+  asyncHandler(listStudents)
 );
 router.get(
   "/me",
   authMiddleware,
   requireRole(["student"]),
-  getMyProfile
+  asyncHandler(getMyProfile)
 );
-router.get("/:id", getStudentById);
+router.get("/:id", asyncHandler(getStudentById));
 
 module.exports = router;

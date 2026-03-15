@@ -2,6 +2,7 @@
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
 const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
+const { formatPaginatedResponse } = require("../../utils/pagination");
 
 exports.createClass = async (req, res) => {
   const { name, subject_id, year } = req.body;
@@ -60,6 +61,7 @@ exports.listMyClasses = async (req, res) => {
 
 exports.listAvailableClasses = async (req, res) => {
   const studentUserId = req.user?.userId;
+  const { limit, offset } = req.pagination;
 
   if (!studentUserId) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -71,6 +73,18 @@ exports.listAvailableClasses = async (req, res) => {
       return res.status(403).json({ message: "Student profile not found." });
     }
 
+    // Get count
+    const countResult = await db.query(
+      "SELECT COUNT(*) as total FROM classes c " +
+        "WHERE NOT EXISTS (" +
+        "  SELECT 1 FROM class_enrollments ce " +
+        "  WHERE ce.class_id = c.id AND ce.student_id = $1 AND ce.status IN ('pending', 'approved')" +
+        ")",
+      [studentId]
+    );
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    // Get paginated data
     const result = await db.query(
       "SELECT c.id, c.name, c.year, s.name AS subject_name, t.name AS teacher_name " +
         "FROM classes c " +
@@ -80,11 +94,11 @@ exports.listAvailableClasses = async (req, res) => {
         "  SELECT 1 FROM class_enrollments ce " +
         "  WHERE ce.class_id = c.id AND ce.student_id = $1 AND ce.status IN ('pending', 'approved')" +
         ") " +
-        "ORDER BY c.year DESC",
-      [studentId]
+        "ORDER BY c.year DESC LIMIT $2 OFFSET $3",
+      [studentId, limit, offset]
     );
 
-    return res.json({ classes: result.rows });
+    return res.json(formatPaginatedResponse(result.rows, total, limit, offset));
   } catch (error) {
     console.error("List available classes error:", error);
     return res.status(500).json({ message: "Internal server error." });

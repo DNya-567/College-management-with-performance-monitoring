@@ -3,6 +3,7 @@
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
 const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
+const { formatPaginatedResponse } = require("../../utils/pagination");
 
 /**
  * POST /api/classes/:classId/announcements
@@ -14,6 +15,15 @@ exports.createAnnouncement = async (req, res) => {
   const { title, body } = req.body;
   const teacherUserId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
+
+  console.log('=== CREATE ANNOUNCEMENT ===');
+  console.log('classId:', classId);
+  console.log('title:', title);
+  console.log('body:', body);
+  console.log('teacherUserId:', teacherUserId);
+  console.log('role:', role);
+  console.log('Full req.body:', req.body);
+  console.log('=====================');
 
   if (!classId || !title || !body) {
     return res.status(400).json({ message: "Class, title, and body are required." });
@@ -146,69 +156,96 @@ exports.listClassAnnouncements = async (req, res) => {
 exports.listMyAnnouncements = async (req, res) => {
   const userId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
+  const { limit, offset } = req.pagination;
 
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
-    let result;
+    let countResult, dataResult;
 
     if (role === "hod") {
       const departmentId = await getDepartmentId(userId);
       if (!departmentId) {
         return res.status(403).json({ message: "HOD profile not found." });
       }
-      result = await db.query(
+
+      countResult = await db.query(
+        "SELECT COUNT(*) as total FROM announcements a " +
+          "JOIN teachers t ON t.id = a.teacher_id " +
+          "WHERE t.department_id = $1",
+        [departmentId]
+      );
+
+      dataResult = await db.query(
         "SELECT a.id, a.title, a.body, a.created_at, a.class_id, t.name AS teacher_name, c.name AS class_name " +
           "FROM announcements a " +
           "JOIN teachers t ON t.id = a.teacher_id " +
           "JOIN classes c ON c.id = a.class_id " +
           "WHERE t.department_id = $1 " +
-          "ORDER BY a.created_at DESC",
-        [departmentId]
+          "ORDER BY a.created_at DESC LIMIT $2 OFFSET $3",
+        [departmentId, limit, offset]
       );
     } else if (role === "teacher") {
       const teacherId = await getTeacherId(userId);
       if (!teacherId) {
         return res.status(403).json({ message: "Teacher profile not found." });
       }
-      result = await db.query(
+
+      countResult = await db.query(
+        "SELECT COUNT(*) as total FROM announcements a WHERE a.teacher_id = $1",
+        [teacherId]
+      );
+
+      dataResult = await db.query(
         "SELECT a.id, a.title, a.body, a.created_at, a.class_id, t.name AS teacher_name, c.name AS class_name " +
           "FROM announcements a " +
           "JOIN teachers t ON t.id = a.teacher_id " +
           "JOIN classes c ON c.id = a.class_id " +
           "WHERE a.teacher_id = $1 " +
-          "ORDER BY a.created_at DESC",
-        [teacherId]
+          "ORDER BY a.created_at DESC LIMIT $2 OFFSET $3",
+        [teacherId, limit, offset]
       );
     } else if (role === "student") {
       const studentId = await getStudentId(userId);
       if (!studentId) {
         return res.status(403).json({ message: "Student profile not found." });
       }
-      result = await db.query(
+
+      countResult = await db.query(
+        "SELECT COUNT(*) as total FROM announcements a " +
+          "JOIN class_enrollments ce ON ce.class_id = a.class_id AND ce.status = 'approved' " +
+          "WHERE ce.student_id = $1",
+        [studentId]
+      );
+
+      dataResult = await db.query(
         "SELECT a.id, a.title, a.body, a.created_at, a.class_id, t.name AS teacher_name, c.name AS class_name " +
           "FROM announcements a " +
           "JOIN teachers t ON t.id = a.teacher_id " +
           "JOIN classes c ON c.id = a.class_id " +
           "JOIN class_enrollments ce ON ce.class_id = a.class_id AND ce.status = 'approved' " +
           "WHERE ce.student_id = $1 " +
-          "ORDER BY a.created_at DESC",
-        [studentId]
+          "ORDER BY a.created_at DESC LIMIT $2 OFFSET $3",
+        [studentId, limit, offset]
       );
     } else {
       // admin: all announcements
-      result = await db.query(
+      countResult = await db.query("SELECT COUNT(*) as total FROM announcements");
+
+      dataResult = await db.query(
         "SELECT a.id, a.title, a.body, a.created_at, a.class_id, t.name AS teacher_name, c.name AS class_name " +
           "FROM announcements a " +
           "JOIN teachers t ON t.id = a.teacher_id " +
           "JOIN classes c ON c.id = a.class_id " +
-          "ORDER BY a.created_at DESC"
+          "ORDER BY a.created_at DESC LIMIT $1 OFFSET $2",
+        [limit, offset]
       );
     }
 
-    return res.json({ announcements: result.rows });
+    const total = parseInt(countResult.rows[0].total, 10);
+    return res.json(formatPaginatedResponse(dataResult.rows, total, limit, offset));
   } catch (error) {
     console.error("List my announcements error:", error);
     return res.status(500).json({ message: "Internal server error." });
