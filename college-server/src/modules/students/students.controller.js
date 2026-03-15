@@ -1,30 +1,14 @@
 // Students controller: database CRUD for students only.
 // Must NOT define routes or implement auth logic.
 const db = require("../../config/db");
+const { formatPaginatedResponse, getLimitOffsetClause } = require("../../utils/pagination");
 
-exports.createStudent = async (req, res) => {
-  const { roll_no, name, class_id, year } = req.body;
-
-  if (!roll_no || !name || !class_id || !year) {
-    return res.status(400).json({ message: "Missing required fields." });
-  }
-
-  try {
-    const result = await db.query(
-      "INSERT INTO students (roll_no, name, class_id, year) VALUES ($1, $2, $3, $4) RETURNING id, roll_no, name, class_id, year, created_at",
-      [roll_no, name, class_id, year]
-    );
-
-    return res.status(201).json({ student: result.rows[0] });
-  } catch (error) {
-    console.error("Create student error:", error);
-    return res.status(500).json({ message: "Internal server error." });
-  }
-};
+// ...existing code...
 
 exports.listStudents = async (req, res) => {
   const role = String(req.user?.role || "").toLowerCase();
   const userId = req.user?.userId;
+  const { limit, offset } = req.pagination;
 
   try {
     if (role === "hod") {
@@ -39,24 +23,41 @@ exports.listStudents = async (req, res) => {
 
       const departmentId = departmentResult.rows[0].department_id;
 
+      // Get total count
+      const countResult = await db.query(
+        "SELECT COUNT(*) as total FROM students s " +
+          "JOIN classes c ON c.id = s.class_id " +
+          "JOIN teachers t ON t.id = c.teacher_id " +
+          "WHERE t.department_id = $1",
+        [departmentId]
+      );
+      const total = parseInt(countResult.rows[0].total, 10);
+
+      // Get paginated data
       const result = await db.query(
-        "SELECT s.id, s.name, s.roll_no " +
-          "FROM students s " +
+        "SELECT s.id, s.name, s.roll_no FROM students s " +
           "JOIN classes c ON c.id = s.class_id " +
           "JOIN teachers t ON t.id = c.teacher_id " +
           "WHERE t.department_id = $1 " +
-          "ORDER BY s.name ASC",
-        [departmentId]
+          "ORDER BY s.name ASC " +
+          "LIMIT $2 OFFSET $3",
+        [departmentId, limit, offset]
       );
 
-      return res.json({ students: result.rows });
+      return res.json(formatPaginatedResponse(result.rows, total, limit, offset));
     }
 
+    // Get total count
+    const countResult = await db.query("SELECT COUNT(*) as total FROM students");
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    // Get paginated data
     const result = await db.query(
-      "SELECT id, name, roll_no FROM students ORDER BY name ASC"
+      "SELECT id, name, roll_no FROM students ORDER BY name ASC LIMIT $1 OFFSET $2",
+      [limit, offset]
     );
 
-    return res.json({ students: result.rows });
+    return res.json(formatPaginatedResponse(result.rows, total, limit, offset));
   } catch (error) {
     console.error("List students error:", error);
     return res.status(500).json({ message: "Internal server error." });

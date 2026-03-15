@@ -1,6 +1,7 @@
 // Classes routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
 const router = require("express").Router();
+const asyncHandler = require("../../utils/asyncHandler");
 const {
   createClass,
   listMyClasses,
@@ -15,43 +16,44 @@ const {
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
 const { validate, createClassSchema } = require("../../utils/validation");
+const { validatePagination } = require("../../utils/pagination");
 
 router.post(
   "/",
   authMiddleware,
   requireRole(["teacher"]),
-  validate(createClassSchema),
-  createClass
+  asyncHandler(createClass)
 );
 router.get(
   "/mine",
   authMiddleware,
   requireRole(["teacher"]),
-  listMyClasses
+  asyncHandler(listMyClasses)
 );
 router.get(
   "/department/stats",
   authMiddleware,
   requireRole(["hod"]),
-  getDepartmentStats
+  asyncHandler(getDepartmentStats)
 );
 router.get(
   "/department",
   authMiddleware,
   requireRole(["hod"]),
-  listDepartmentClasses
+  asyncHandler(listDepartmentClasses)
 );
 router.get(
   "/",
   authMiddleware,
   requireRole(["student"]),
-  listAvailableClasses
+  validatePagination,
+  asyncHandler(listAvailableClasses)
 );
 router.post(
   "/:classId/join",
   authMiddleware,
   requireRole(["student"]),
-  requestEnrollment
+  asyncHandler(requestEnrollment)
 );
 router.get(
   "/:classId/students",

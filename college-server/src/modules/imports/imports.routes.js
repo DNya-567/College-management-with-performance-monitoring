@@ -2,6 +2,7 @@
 // Must NOT include SQL, auth logic, or business logic.
 const router = require("express").Router();
 const multer = require("multer");
+const asyncHandler = require("../../utils/asyncHandler");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
 const {
@@ -30,7 +31,7 @@ router.post(
   authMiddleware,
   requireRole(["admin"]),
   upload.single("file"),
-  importStudents
+  asyncHandler(importStudents)
 );
 
 // Teacher: bulk import marks for a class
@@ -39,12 +40,12 @@ router.post(
   authMiddleware,
   requireRole(["teacher"]),
   upload.single("file"),
-  importMarks
+  asyncHandler(importMarks)
 );
 
 // Templates (any authenticated user can download)
-router.get("/templates/students", authMiddleware, getStudentTemplate);
-router.get("/templates/marks", authMiddleware, getMarksTemplate);
+router.get("/templates/students", authMiddleware, asyncHandler(getStudentTemplate));
+router.get("/templates/marks", authMiddleware, asyncHandler(getMarksTemplate));
 
 module.exports = router;
 

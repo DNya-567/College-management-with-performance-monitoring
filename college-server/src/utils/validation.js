@@ -81,9 +81,16 @@ exports.markAttendanceSchema = Joi.object({
 // ─── ANNOUNCEMENT SCHEMAS ──────────────────────────────────────────────────
 
 exports.createAnnouncementSchema = Joi.object({
-  title: Joi.string().min(5).max(200).required(),
-  content: Joi.string().min(10).max(5000).required(),
-  class_id: Joi.string().uuid().allow(null)
+  title: Joi.string().trim().min(5).max(200).required().messages({
+    'string.min': 'Title must be at least 5 characters',
+    'string.max': 'Title cannot exceed 200 characters',
+    'any.required': 'Title is required'
+  }),
+  body: Joi.string().trim().min(10).max(5000).required().messages({
+    'string.min': 'Body must be at least 10 characters',
+    'string.max': 'Body cannot exceed 5000 characters',
+    'any.required': 'Body is required'
+  })
 });
 
 // ─── ENROLLMENT SCHEMAS ────────────────────────────────────────────────────
@@ -127,16 +134,33 @@ exports.bulkImportMarksSchema = Joi.object({
  */
 exports.validate = (schema) => {
   return (req, res, next) => {
+    console.log('=== VALIDATION MIDDLEWARE ===');
+    console.log('Request Path:', req.path);
+    console.log('Request Method:', req.method);
+    console.log('Raw Body Received:', JSON.stringify(req.body, null, 2));
+    console.log('Body Type:', typeof req.body);
+    console.log('Body Keys:', Object.keys(req.body || {}));
+
     const { error, value } = schema.validate(req.body, {
       abortEarly: false,
-      stripUnknown: true
+      stripUnknown: false,
+      convert: true,
+      presence: 'required'
     });
+
+    console.log('Validation Error:', error ? error.details : 'None');
+    console.log('Validated Value:', JSON.stringify(value, null, 2));
+    console.log('=============================');
 
     if (error) {
       const messages = error.details.map(err => ({
         field: err.path.join('.'),
-        message: err.message
+        message: err.message,
+        type: err.type,
+        context: err.context
       }));
+
+      console.error('VALIDATION FAILED:', messages);
 
       return res.status(400).json({
         message: 'Validation failed',

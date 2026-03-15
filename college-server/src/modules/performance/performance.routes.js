@@ -1,6 +1,7 @@
 // Performance routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
 const router = require("express").Router();
+const asyncHandler = require("../../utils/asyncHandler");
 const {
   getMyPerformance,
   getClassPerformance,
@@ -31,7 +32,7 @@ router.get(
   "/performance/department",
   authMiddleware,
   requireRole(["hod"]),
-  getDepartmentPerformance
+  asyncHandler(getDepartmentPerformance)
 );
 
 // Teacher: class-wide performance table (all students ranked)
@@ -39,7 +40,7 @@ router.get(
   "/performance/class/:classId",
   authMiddleware,
   requireRole(["teacher", "hod"]),
-  getClassPerformance
+  asyncHandler(getClassPerformance)
 );
 
 module.exports = router;

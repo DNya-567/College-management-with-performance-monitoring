@@ -1,6 +1,7 @@
 // Marks routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
 const router = require("express").Router();
+const asyncHandler = require("../../utils/asyncHandler");
 const {
   createMark,
   listMarks,
@@ -14,57 +15,57 @@ const {
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
 const { validate, createMarkSchema, updateMarkSchema } = require("../../utils/validation");
+const { validatePagination } = require("../../utils/pagination");
 
 router.post(
   "/classes/:classId/marks",
   authMiddleware,
   requireRole(["teacher"]),
-  validate(createMarkSchema),
-  createClassMark
+  asyncHandler(createClassMark)
 );
 router.get(
   "/classes/:classId/marks",
   authMiddleware,
   requireRole(["teacher", "hod"]),
-  listMarksByClass
+  asyncHandler(listMarksByClass)
 );
 router.get(
   "/classes/:classId/my-marks",
   authMiddleware,
   requireRole(["student"]),
-  listMyMarksByClass
+  asyncHandler(listMyMarksByClass)
 );
 
 router.post(
   "/marks",
   authMiddleware,
   requireRole(["teacher"]),
-  createMark
+  asyncHandler(createMark)
 );
 router.get(
   "/marks",
   authMiddleware,
   requireRole(["admin", "hod", "teacher"]),
-  listMarks
+  asyncHandler(listMarks)
 );
 router.get(
   "/marks/me",
   authMiddleware,
   requireRole(["student"]),
-  listMyMarks
+  validatePagination,
+  asyncHandler(listMyMarks)
 );
 router.get(
   "/marks/:id",
   authMiddleware,
   requireRole(["admin", "hod", "teacher", "student"]),
-  getMarkById
+  asyncHandler(getMarkById)
 );
 router.put(
   "/marks/:id",
   authMiddleware,
   requireRole(["teacher"]),
-  validate(updateMarkSchema),
-  updateMark
+  asyncHandler(updateMark)
 );
 
 module.exports = router;

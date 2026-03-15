@@ -2,6 +2,7 @@
 // All routes are protected with admin-only access.
 // Must NOT include SQL, auth logic, or business logic.
 const router = require("express").Router();
+const asyncHandler = require("../../utils/asyncHandler");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
 const {
@@ -30,43 +31,43 @@ const {
 router.use(authMiddleware, requireRole(["admin"]));
 
 // Dashboard stats
-router.get("/stats", getSystemStats);
+router.get("/stats", asyncHandler(getSystemStats));
 
 // Recent activity (announcements)
-router.get("/recent-activity", getRecentActivity);
+router.get("/recent-activity", asyncHandler(getRecentActivity));
 
 // Audit logs
-router.get("/audit-logs", getAuditLogs);
+router.get("/audit-logs", asyncHandler(getAuditLogs));
 
 // User management
-router.get("/users", listAllUsers);
-router.put("/users/:id/reset-password", resetUserPassword);
-router.put("/users/:id/toggle-status", toggleUserStatus);
-router.delete("/users/:id", deleteUser);
+router.get("/users", asyncHandler(listAllUsers));
+router.put("/users/:id/reset-password", asyncHandler(resetUserPassword));
+router.put("/users/:id/toggle-status", asyncHandler(toggleUserStatus));
+router.delete("/users/:id", asyncHandler(deleteUser));
 
 // Class overview (read-only)
-router.get("/classes", listAllClasses);
+router.get("/classes", asyncHandler(listAllClasses));
 
 // Teacher management
-router.get("/teachers", listAllTeachers);
-router.put("/teachers/:id/department", updateTeacherDepartment);
+router.get("/teachers", asyncHandler(listAllTeachers));
+router.put("/teachers/:id/department", asyncHandler(updateTeacherDepartment));
 
 // Student management (read-only)
-router.get("/students", listAllStudents);
+router.get("/students", asyncHandler(listAllStudents));
 
 // Department management (full CRUD)
-router.get("/departments", listAllDepartments);
-router.post("/departments", createDepartment);
-router.put("/departments/:id", updateDepartment);
-router.delete("/departments/:id", deleteDepartment);
-router.put("/departments/:id/hod", assignHod);
+router.get("/departments", asyncHandler(listAllDepartments));
+router.post("/departments", asyncHandler(createDepartment));
+router.put("/departments/:id", asyncHandler(updateDepartment));
+router.delete("/departments/:id", asyncHandler(deleteDepartment));
+router.put("/departments/:id/hod", asyncHandler(assignHod));
 
 // Database Index Management (CRITICAL for production)
 // POST to create all indexes (safe to run multiple times)
 // GET to list or view stats
-router.post("/indexes/create", createIndexes);
-router.get("/indexes/list", listIndexes);
-router.get("/indexes/stats", getIndexStats);
+router.post("/indexes/create", asyncHandler(createIndexes));
+router.get("/indexes/list", asyncHandler(listIndexes));
+router.get("/indexes/stats", asyncHandler(getIndexStats));
 
 module.exports = router;
 

@@ -1,6 +1,7 @@
 // Reports routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
 const router = require("express").Router();
+const asyncHandler = require("../../utils/asyncHandler");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const requireRole = require("../../middlewares/role.middleware");
 const { generateReportCard } = require("./reports.controller");
@@ -10,7 +11,7 @@ router.get(
   "/student/:studentId/reportcard",
   authMiddleware,
   requireRole(["student", "teacher"]),
-  generateReportCard
+  asyncHandler(generateReportCard)
 );
 
 module.exports = router;

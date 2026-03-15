@@ -1,6 +1,7 @@
 // Attendance routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
 const router = require("express").Router();
+const asyncHandler = require("../../utils/asyncHandler");
 const {
   createAttendance,
   listAttendanceByDate,
@@ -20,49 +21,49 @@ router.post(
   authMiddleware,
   requireRole(["teacher"]),
   validate(markAttendanceSchema),
-  createAttendance
+  asyncHandler(createAttendance)
 );
 router.get(
   "/classes/:classId/attendance",
   authMiddleware,
   requireRole(["teacher"]),
-  listAttendanceByDate
+  asyncHandler(listAttendanceByDate)
 );
 router.get(
   "/classes/:classId/my-attendance",
   authMiddleware,
   requireRole(["student"]),
-  listMyAttendance
+  asyncHandler(listMyAttendance)
 );
 router.get(
   "/classes/:classId/attendance/summary",
   authMiddleware,
   requireRole(["teacher", "hod"]),
-  getAttendanceSummary
+  asyncHandler(getAttendanceSummary)
 );
 router.get(
   "/classes/:classId/attendance/top",
   authMiddleware,
   requireRole(["teacher"]),
-  listTopAttendance
+  asyncHandler(listTopAttendance)
 );
 router.get(
   "/classes/:classId/attendance/student/:studentId",
   authMiddleware,
   requireRole(["teacher"]),
-  listStudentAttendanceForClass
+  asyncHandler(listStudentAttendanceForClass)
 );
 router.post(
   "/attendance",
   authMiddleware,
   requireRole(["teacher", "admin"]),
-  markAttendance
+  asyncHandler(markAttendance)
 );
 router.get(
   "/attendance/me",
   authMiddleware,
   requireRole(["student"]),
-  listMyAttendanceRange
+  asyncHandler(listMyAttendanceRange)
 );
 
 module.exports = router;
