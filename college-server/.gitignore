@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contains secrets — never commit)
+.env
+.env.local
+.env.production
+
+# Logs (generated at runtime — not source code)
+logs/
+*.log
+server.log
+
+# Database scripts output
+reset_output.txt
+
+# Build artifacts
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.idea/
+.vscode/
+*.suo
+*.sw?
+
+# Test files
+test-*.js
+verify-*.js
+apply-indexes*.js
+
+# Documentation files (keep locally, not needed on GitHub)
+*.md
+!README.md
+
+# Seed and migration runner (dev only scripts)
+seed.js
