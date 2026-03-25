@@ -10,6 +10,7 @@
     "seed:admin": "node src/scripts/seedAdmin.js",
     "apply-indexes": "node apply-indexes-safe.js",
     "verify-indexes": "node verify-indexes.js",
+    "validate-schema": "node validate-schema.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -31,7 +32,7 @@
     "papaparse": "^5.5.3",
     "pdfkit": "^0.17.2",
     "pg": "^8.18.0",
-    "uuid": "^13.0.0",
+    "uuid": "^9.0.1",
     "winston": "^3.19.0"
   },
   "devDependencies": {
