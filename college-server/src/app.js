@@ -1,37 +1,36 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const env = require("./config/env");
-const logger = require("./config/logger");
-const {
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import { v4 as uuidv4 } from "uuid";
+import env from "./config/env.js";
+import logger from "./config/logger.js";
+import {
   generalLimiter,
   authLimiter,
   uploadLimiter,
   createUpdateLimiter,
   reportingLimiter,
   adminLimiter,
-} = require("./config/rateLimiter");
+} from "./config/rateLimiter.js";
 
-const authRoutes = require("./modules/auth/auth.routes");
-const marksRoutes = require("./modules/marks/marks.routes");
-const classesRoutes = require("./modules/classes/classes.routes");
-const enrollmentsRoutes = require("./modules/enrollments/enrollments.routes");
-const attendanceRoutes = require("./modules/attendance/attendance.routes");
-const subjectsRoutes = require("./modules/subjects/subjects.routes");
-const teachersRoutes = require("./modules/teachers/teachers.routes");
-const studentsRoutes = require("./modules/students/students.routes");
-const announcementsRoutes = require("./modules/announcements/announcements.routes");
-const { classRouter: announcementsClassRoutes } = require("./modules/announcements/announcements.routes");
-const performanceRoutes = require("./modules/performance/performance.routes");
-const departmentsRoutes = require("./modules/departments/departments.routes");
-const adminRoutes = require("./modules/admin/admin.routes");
-const semestersRoutes = require("./modules/semesters/semesters.routes");
-const reportsRoutes = require("./modules/reports/reports.routes");
-const exportsRoutes = require("./modules/exports/exports.routes");
-const importsRoutes = require("./modules/imports/imports.routes");
-const schedulesRoutes = require("./modules/schedules/schedules.routes");
-const { classRouter: schedulesClassRoutes } = require("./modules/schedules/schedules.routes");
-const healthRoutes = require("./routes/health.routes");
+import authRoutes from "./modules/auth/auth.routes.js";
+import marksRoutes from "./modules/marks/marks.routes.js";
+import classesRoutes from "./modules/classes/classes.routes.js";
+import enrollmentsRoutes from "./modules/enrollments/enrollments.routes.js";
+import attendanceRoutes from "./modules/attendance/attendance.routes.js";
+import subjectsRoutes from "./modules/subjects/subjects.routes.js";
+import teachersRoutes from "./modules/teachers/teachers.routes.js";
+import studentsRoutes from "./modules/students/students.routes.js";
+import announcementsRoutes, { classRouter as announcementsClassRoutes } from "./modules/announcements/announcements.routes.js";
+import performanceRoutes from "./modules/performance/performance.routes.js";
+import departmentsRoutes from "./modules/departments/departments.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
+import semestersRoutes from "./modules/semesters/semesters.routes.js";
+import reportsRoutes from "./modules/reports/reports.routes.js";
+import exportsRoutes from "./modules/exports/exports.routes.js";
+import importsRoutes from "./modules/imports/imports.routes.js";
+import schedulesRoutes, { classRouter as schedulesClassRoutes } from "./modules/schedules/schedules.routes.js";
+import healthRoutes from "./routes/health.routes.js";
 
 const app = express();
 
@@ -39,7 +38,6 @@ const app = express();
 app.use(helmet());
 
 // ── Correlation ID for request tracing ──
-const { v4: uuidv4 } = require('uuid');
 app.use((req, res, next) => {
   req.correlationId = req.headers['x-correlation-id'] || uuidv4();
   res.setHeader('x-correlation-id', req.correlationId);
@@ -57,6 +55,8 @@ app.use(
     credentials: true,
   })
 );
+
+// ...existing code...
 
 // ── Body parsing with size limit to prevent oversized payloads ──
 app.use(express.json({ limit: "1mb" }));
@@ -163,4 +163,4 @@ app.use((err, req, res, _next) => {
   });
 });
 
-module.exports = app;
+export default app;
