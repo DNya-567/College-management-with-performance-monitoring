@@ -100,6 +100,21 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
 });
 
+// ── Root route — API information (helps diagnose deployment issues) ──
+app.get("/", (_req, res) => {
+  res.json({
+    message: "College Management System API",
+    version: "1.0.0",
+    status: "running",
+    endpoints: {
+      health: "/api/health",
+      auth: "/api/auth/login",
+      docs: "https://github.com/your-repo/docs",
+    },
+    environment: process.env.NODE_ENV || "development",
+  });
+});
+
 // ── Route mounts ──
 app.use("/api/auth", authRoutes);
 app.use("/api", marksRoutes);
