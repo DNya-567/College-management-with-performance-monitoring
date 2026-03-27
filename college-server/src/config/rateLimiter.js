@@ -12,11 +12,11 @@
  * - Uses express-rate-limit with in-memory store (suitable for single-instance)
  * - For multi-instance deployment, use redis store (not implemented here)
  * - Returns 429 Too Many Requests when limit exceeded
- * - Logs rate limit violations for monitoring
+ * Logs rate limit violations for monitoring
  */
 
-import rateLimit from "express-rate-limit";
-import logger from "./logger.js";
+const rateLimit = require("express-rate-limit");
+const logger = require("./logger");
 
 /**
  * General API Limiter
@@ -191,7 +191,7 @@ const adminLimiter = rateLimit({
   },
 });
 
-export {
+module.exports = {
   generalLimiter,
   authLimiter,
   uploadLimiter,

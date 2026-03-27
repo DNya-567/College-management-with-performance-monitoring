@@ -2,14 +2,10 @@
 // Logs all application events to file and console
 // Levels: error, warn, info, debug (only console in dev, file+console)
 
-import winston from 'winston';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import env from './env.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const winston = require('winston');
+const path = require('path');
+const fs = require('fs');
+const env = require('./env');
 
 // Create logs directory if it doesn't exist
 const logsDir = path.join(__dirname, '../../logs');
@@ -134,5 +130,4 @@ logger.logDbQuery = (success, query, params = [], error = null, context = {}) =>
 };
 
 module.exports = logger;
-export default logger;
 

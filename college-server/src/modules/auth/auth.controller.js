@@ -9,26 +9,7 @@ const env = require("../../config/env");
 const logger = require("../../config/logger");
 const { sendEmail } = require("../../utils/email");
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-/** SHA-256 hash of a plain token (we never store raw tokens in DB) */
-const hashToken = (token) =>
-  crypto.createHash("sha256").update(token).digest("hex");
-
-/** Resolve display name for a user (teacher/hod → teachers table, student → students table) */
-const resolveDisplayName = async (userId, role) => {
-  try {
-    if (role === "teacher" || role === "hod") {
-      const r = await db.query("SELECT name FROM teachers WHERE user_id = $1", [userId]);
-      if (r.rowCount > 0) return r.rows[0].name;
-    } else if (role === "student") {
-      const r = await db.query("SELECT name FROM students WHERE user_id = $1", [userId]);
-      if (r.rowCount > 0) return r.rows[0].name;
-    }
-  } catch (_) {
-    /* ignore — fall back to email */
-  }
-  return null;
-};
+// ─── Controllers ──────────────────────────────────────────────────────────────
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
@@ -222,7 +203,9 @@ exports.registerHod = async (req, res) => {
   }
 };
 
-exports.registerStudent = async (req, res) => {
+// DUPLICATE FUNCTION - Commented out (use line 111 version)
+/*
+export const registerStudent = async (req, res) => {
   const { name, email, password, roll_no, year, class_id } = req.body;
 
   if (!name || !email || !password || !roll_no || year === undefined) {
@@ -271,6 +254,7 @@ exports.registerStudent = async (req, res) => {
     return res.status(500).json({ message: "Internal server error." });
   }
 };
+*/
 
 /**
  * PUT /api/auth/change-password

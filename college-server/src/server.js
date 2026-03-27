@@ -1,16 +1,13 @@
-import path from "path";
-import { fileURLToPath } from "url";
-import dotenv from "dotenv";
-import env from "./config/env.js";
-import app from "./app.js";
-import { initializeIndexes } from "./utils/initializeDb.js";
-import { gracefulShutdown, stopMetricsMonitoring } from "./config/db.js";
-import logger from "./config/logger.js";
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Load & validate all environment variables BEFORE anything else
+const env = require("./config/env");
 
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
+const app = require("./app");
+const { initializeIndexes } = require("./utils/initializeDb");
+const { gracefulShutdown, stopMetricsMonitoring } = require("./config/db");
+const logger = require("./config/logger");
 
 let server;
 

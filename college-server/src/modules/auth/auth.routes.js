@@ -1,8 +1,8 @@
 // Routes for auth endpoints only; delegates logic to controllers.
 // Must NOT contain business logic, SQL, or auth verification.
-import express from "express";
-import asyncHandler from "../../utils/asyncHandler.js";
-import {
+const router = require("express").Router();
+const asyncHandler = require("../../utils/asyncHandler");
+const {
   login,
   me,
   registerTeacher,
@@ -11,12 +11,10 @@ import {
   changePassword,
   forgotPassword,
   resetPassword,
-} from "./auth.controller.js";
-import authMiddleware from "../../middlewares/auth.middleware.js";
-import requireRole from "../../middlewares/role.middleware.js";
-import { validate, loginSchema, registerTeacherSchema, registerStudentSchema, forgotPasswordSchema, resetPasswordSchema } from "../../utils/validation.js";
-
-const router = express.Router();
+} = require("./auth.controller");
+const authMiddleware = require("../../middlewares/auth.middleware");
+const requireRole = require("../../middlewares/role.middleware");
+const { validate, loginSchema, registerTeacherSchema, registerStudentSchema, forgotPasswordSchema, resetPasswordSchema } = require("../../utils/validation");
 
 router.post("/login", validate(loginSchema), asyncHandler(login));
 router.get("/me", authMiddleware, asyncHandler(me));

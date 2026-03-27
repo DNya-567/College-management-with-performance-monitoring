@@ -1,9 +1,9 @@
 // Database connection pool configuration for production scale
 // Handles 50-100 concurrent connections with proper timeout handling and metrics
 // Must NOT contain business logic — only connection config and pool setup
-import { Pool } from "pg";
-import env from "./env.js";
-import logger from "./logger.js";
+const { Pool } = require("pg");
+const env = require("./env");
+const logger = require("./logger");
 
 const poolConfig = {
   ...(env.DATABASE_URL
@@ -152,5 +152,8 @@ const healthCheck = async () => {
 
 startMetricsMonitoring();
 
-export default pool;
-export { getPoolStats, gracefulShutdown, healthCheck, stopMetricsMonitoring };
+module.exports = pool;
+module.exports.getPoolStats = getPoolStats;
+module.exports.gracefulShutdown = gracefulShutdown;
+module.exports.healthCheck = healthCheck;
+module.exports.stopMetricsMonitoring = stopMetricsMonitoring;
