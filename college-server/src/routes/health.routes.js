@@ -1,11 +1,10 @@
 // Health check endpoint for monitoring database and server health
 // Used by load balancers, monitoring systems, and health dashboards
 
-import express from 'express';
-import db from '../config/db.js';
-import logger from '../config/logger.js';
-
+const express = require('express');
 const router = express.Router();
+const db = require('../config/db');
+const logger = require('../config/logger');
 
 /**
  * GET /health
@@ -95,5 +94,5 @@ router.get('/pool', (req, res) => {
   });
 });
 
-export default router;
+module.exports = router;
 

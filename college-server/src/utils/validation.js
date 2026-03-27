@@ -116,7 +116,6 @@ exports.createSemesterSchema = Joi.object({
 
 exports.bulkImportStudentsSchema = Joi.object({
   file: Joi.any().required().messages({
-    'any.required': 'CSV file is required'
   })
 });
 
@@ -227,4 +226,5 @@ exports.validateParams = (schema) => {
     next();
   };
 };
+
 

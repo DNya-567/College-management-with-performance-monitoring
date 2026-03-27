@@ -37,4 +37,3 @@ env.isProduction = env.NODE_ENV === "production";
 env.isDevelopment = env.NODE_ENV === "development";
 
 module.exports = env;
-export default env;
