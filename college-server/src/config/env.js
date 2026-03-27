@@ -7,6 +7,7 @@ const env = {
   PORT: Number(process.env.PORT) || 5000,
 
   // Database
+  DATABASE_URL: process.env.DATABASE_URL || null,
   DB_HOST: process.env.DB_HOST || "localhost",
   DB_PORT: Number(process.env.DB_PORT) || 5432,
   DB_USER: process.env.DB_USER || "postgres",
@@ -22,7 +23,7 @@ const env = {
 };
 
 // ── Required vars that MUST exist ──
-const REQUIRED = ["DB_PASSWORD", "JWT_SECRET"];
+const REQUIRED = env.DATABASE_URL ? ["JWT_SECRET"] : ["DB_PASSWORD", "JWT_SECRET"];
 
 const missing = REQUIRED.filter((key) => !env[key]);
 if (missing.length > 0) {
@@ -36,4 +37,3 @@ env.isProduction = env.NODE_ENV === "production";
 env.isDevelopment = env.NODE_ENV === "development";
 
 module.exports = env;
-
