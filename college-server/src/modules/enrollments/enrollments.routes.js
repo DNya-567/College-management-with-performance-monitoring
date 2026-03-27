@@ -1,16 +1,18 @@
 // Enrollments routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
-const router = require("express").Router();
-const asyncHandler = require("../../utils/asyncHandler");
-const {
+import express from 'express';
+import asyncHandler from '../../utils/asyncHandler.js';
+import {
   listEnrollmentRequests,
   approveEnrollment,
   rejectEnrollment,
   listMyClasses,
   listMyPendingClasses,
-} = require("./enrollments.controller");
-const authMiddleware = require("../../middlewares/auth.middleware");
-const requireRole = require("../../middlewares/role.middleware");
+} from './enrollments.controller.js';
+import authMiddleware from '../../middlewares/auth.middleware.js';
+import requireRole from '../../middlewares/role.middleware.js';
+
+const router = express.Router();
 
 router.get(
   "/requests",
@@ -42,5 +44,4 @@ router.get(
   requireRole(["student"]),
   asyncHandler(listMyPendingClasses)
 );
-
-module.exports = router;
+export default router;

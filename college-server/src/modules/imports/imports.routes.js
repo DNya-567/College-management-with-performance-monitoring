@@ -1,16 +1,18 @@
 // Imports routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
-const router = require("express").Router();
-const multer = require("multer");
-const asyncHandler = require("../../utils/asyncHandler");
-const authMiddleware = require("../../middlewares/auth.middleware");
-const requireRole = require("../../middlewares/role.middleware");
-const {
+import express from 'express';
+import multer from 'multer';
+import asyncHandler from '../../utils/asyncHandler.js';
+import authMiddleware from '../../middlewares/auth.middleware.js';
+import requireRole from '../../middlewares/role.middleware.js';
+import {
   importStudents,
   importMarks,
   getStudentTemplate,
   getMarksTemplate,
-} = require("./imports.controller");
+} from './imports.controller.js';
+
+const router = express.Router();
 
 // Multer: store files in memory (CSV files are small)
 const upload = multer({
@@ -47,5 +49,5 @@ router.post(
 router.get("/templates/students", authMiddleware, asyncHandler(getStudentTemplate));
 router.get("/templates/marks", authMiddleware, asyncHandler(getMarksTemplate));
 
-module.exports = router;
+export default router;
 
