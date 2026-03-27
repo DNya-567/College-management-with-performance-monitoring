@@ -9,7 +9,7 @@
 // Required env vars (for production):
 //   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
 
-const nodemailer = require("nodemailer");
+import nodemailer from 'nodemailer';
 
 const isConfigured =
   process.env.SMTP_HOST &&
@@ -74,7 +74,7 @@ const initPromise = init();
  * Send an email. Fire-and-forget — never throws.
  * @param {{ to: string, subject: string, text: string, html?: string }} opts
  */
-const sendEmail = async ({ to, subject, text, html }) => {
+export const sendEmail = async ({ to, subject, text, html }) => {
   // Wait for transporter to be ready (only on first call)
   await initPromise;
 
@@ -106,6 +106,3 @@ const sendEmail = async ({ to, subject, text, html }) => {
     console.error(`[EMAIL] Failed to send to ${to}:`, error.message);
   }
 };
-
-module.exports = { sendEmail };
-

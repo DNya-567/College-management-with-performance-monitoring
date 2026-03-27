@@ -1,7 +1,7 @@
 // Middleware responsible for verifying JWTs and checking active status.
 // Performs a lightweight DB check to enforce account deactivation immediately.
-const jwt = require("jsonwebtoken");
-const db = require("../config/db");
+import jwt from "jsonwebtoken";
+import pool from "../config/db.js";
 
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization || "";
@@ -16,7 +16,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = decoded;
 
     // Check if user account is still active
-    const result = await db.query(
+    const result = await pool.query(
       "SELECT is_active FROM users WHERE id = $1",
       [decoded.userId]
     );
@@ -35,4 +35,4 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-module.exports = authMiddleware;
+export default authMiddleware;
