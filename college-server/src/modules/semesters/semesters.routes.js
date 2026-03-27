@@ -1,19 +1,21 @@
 // Semesters routes: maps HTTP endpoints to controller functions.
 // GET /active is public to authenticated users; write ops are admin-only.
 // Must NOT include SQL, auth logic, or business logic.
-const router = require("express").Router();
-const asyncHandler = require("../../utils/asyncHandler");
-const authMiddleware = require("../../middlewares/auth.middleware");
-const requireRole = require("../../middlewares/role.middleware");
-const { validate, createSemesterSchema } = require("../../utils/validation");
-const {
+import express from 'express';
+import asyncHandler from '../../utils/asyncHandler.js';
+import authMiddleware from '../../middlewares/auth.middleware.js';
+import requireRole from '../../middlewares/role.middleware.js';
+import { validate, createSemesterSchema } from '../../utils/validation.js';
+import {
   listSemesters,
   getActiveSemester,
   createSemester,
   updateSemester,
   deleteSemester,
   setActiveSemester,
-} = require("./semesters.controller");
+} from './semesters.controller.js';
+
+const router = express.Router();
 
 // All routes require auth
 router.use(authMiddleware);
@@ -28,5 +30,5 @@ router.put("/:id", requireRole(["admin"]), asyncHandler(updateSemester));
 router.delete("/:id", requireRole(["admin"]), asyncHandler(deleteSemester));
 router.put("/:id/activate", requireRole(["admin"]), asyncHandler(setActiveSemester));
 
-module.exports = router;
+export default router;
 

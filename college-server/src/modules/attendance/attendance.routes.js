@@ -1,8 +1,8 @@
 // Attendance routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
-const router = require("express").Router();
-const asyncHandler = require("../../utils/asyncHandler");
-const {
+import express from 'express';
+import asyncHandler from '../../utils/asyncHandler.js';
+import {
   createAttendance,
   listAttendanceByDate,
   listMyAttendance,
@@ -11,10 +11,12 @@ const {
   listMyAttendanceRange,
   listStudentAttendanceForClass,
   getAttendanceSummary,
-} = require("./attendance.controller");
-const authMiddleware = require("../../middlewares/auth.middleware");
-const requireRole = require("../../middlewares/role.middleware");
-const { validate, markAttendanceSchema } = require("../../utils/validation");
+} from './attendance.controller.js';
+import authMiddleware from '../../middlewares/auth.middleware.js';
+import requireRole from '../../middlewares/role.middleware.js';
+import { validate, markAttendanceSchema } from '../../utils/validation.js';
+
+const router = express.Router();
 
 router.post(
   "/classes/:classId/attendance",
@@ -66,4 +68,4 @@ router.get(
   asyncHandler(listMyAttendanceRange)
 );
 
-module.exports = router;
+export default router;

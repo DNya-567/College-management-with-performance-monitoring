@@ -2,11 +2,13 @@
 // Public endpoint — used by registration forms to show department dropdown.
 // HOD-only endpoints to manage teachers in their department.
 // Must NOT include SQL, auth logic, or business logic.
-const router = require("express").Router();
-const asyncHandler = require("../../utils/asyncHandler");
-const authMiddleware = require("../../middlewares/auth.middleware");
-const requireRole = require("../../middlewares/role.middleware");
-const { listDepartments, getTeachersByDepartment, getTeacherPerformance } = require("./departments.controller");
+import express from 'express';
+import asyncHandler from '../../utils/asyncHandler.js';
+import authMiddleware from '../../middlewares/auth.middleware.js';
+import requireRole from '../../middlewares/role.middleware.js';
+import { listDepartments, getTeachersByDepartment, getTeacherPerformance } from './departments.controller.js';
+
+const router = express.Router();
 
 // GET /api/departments — no auth required (needed for registration forms)
 router.get("/", asyncHandler(listDepartments));
@@ -28,5 +30,5 @@ router.get(
   asyncHandler(getTeacherPerformance)
 );
 
-module.exports = router;
+export default router;
 

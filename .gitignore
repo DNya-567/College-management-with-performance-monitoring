@@ -1,12 +1,14 @@
 # Dependencies
-college-server/node_modules/
+# This ignores the folder so you don't push thousands of library files to GitHub
+node_modules/
+/college-server/node_modules/
 
-# Environment variables (contains secrets — never commit)
+# Environment variables
 .env
 .env.local
 .env.production
 
-# Logs (generated at runtime — not source code)
+# Logs
 logs/
 *.log
 server.log
@@ -32,9 +34,9 @@ test-*.js
 verify-*.js
 apply-indexes*.js
 
-# Documentation files (keep locally, not needed on GitHub)
+# Documentation files
 *.md
 !README.md
 
-# Seed and migration runner (dev only scripts)
+# Seed and migration runner
 seed.js

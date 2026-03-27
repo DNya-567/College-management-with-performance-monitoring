@@ -1,22 +1,24 @@
 // Classes routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
-const router = require("express").Router();
-const asyncHandler = require("../../utils/asyncHandler");
-const {
+import express from 'express';
+import asyncHandler from '../../utils/asyncHandler.js';
+import {
   createClass,
   listMyClasses,
   listAvailableClasses,
   listApprovedStudents,
   listDepartmentClasses,
   getDepartmentStats,
-} = require("./classes.controller");
-const {
+} from './classes.controller.js';
+import {
   requestEnrollment,
-} = require("../enrollments/enrollments.controller");
-const authMiddleware = require("../../middlewares/auth.middleware");
-const requireRole = require("../../middlewares/role.middleware");
-const { validate, createClassSchema } = require("../../utils/validation");
-const { validatePagination } = require("../../utils/pagination");
+} from '../enrollments/enrollments.controller.js';
+import authMiddleware from '../../middlewares/auth.middleware.js';
+import requireRole from '../../middlewares/role.middleware.js';
+import { validate, createClassSchema } from '../../utils/validation.js';
+import { validatePagination } from '../../utils/pagination.js';
+
+const router = express.Router();
 
 router.post(
   "/",
@@ -62,4 +64,4 @@ router.get(
   listApprovedStudents
 );
 
-module.exports = router;
+export default router;

@@ -1,11 +1,11 @@
 // Admin routes: maps HTTP endpoints to admin controller functions.
 // All routes are protected with admin-only access.
 // Must NOT include SQL, auth logic, or business logic.
-const router = require("express").Router();
-const asyncHandler = require("../../utils/asyncHandler");
-const authMiddleware = require("../../middlewares/auth.middleware");
-const requireRole = require("../../middlewares/role.middleware");
-const {
+import express from 'express';
+import asyncHandler from '../../utils/asyncHandler.js';
+import authMiddleware from '../../middlewares/auth.middleware.js';
+import requireRole from '../../middlewares/role.middleware.js';
+import {
   getSystemStats,
   listAllUsers,
   listAllClasses,
@@ -25,7 +25,7 @@ const {
   createIndexes,
   listIndexes,
   getIndexStats,
-} = require("./admin.controller");
+} from './admin.controller.js';
 
 // All admin routes require authentication + admin role
 router.use(authMiddleware, requireRole(["admin"]));
@@ -69,5 +69,5 @@ router.post("/indexes/create", asyncHandler(createIndexes));
 router.get("/indexes/list", asyncHandler(listIndexes));
 router.get("/indexes/stats", asyncHandler(getIndexStats));
 
-module.exports = router;
+export default router;
 

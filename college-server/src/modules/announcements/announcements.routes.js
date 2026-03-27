@@ -3,19 +3,21 @@
 //
 // Mounted at /api/announcements for the listing route.
 // Class-scoped routes are mounted separately at /api/classes in app.js.
-const router = require("express").Router();
-const classRouter = require("express").Router({ mergeParams: true });
-const asyncHandler = require("../../utils/asyncHandler");
-const logger = require("../../config/logger");
+import express from 'express';
+import asyncHandler from '../../utils/asyncHandler.js';
+import logger from '../../config/logger.js';
 const {
   createAnnouncement,
   listClassAnnouncements,
   listMyAnnouncements,
-} = require("./announcements.controller");
-const authMiddleware = require("../../middlewares/auth.middleware");
-const requireRole = require("../../middlewares/role.middleware");
-const { validate, createAnnouncementSchema } = require("../../utils/validation");
-const { validatePagination } = require("../../utils/pagination");
+} from './announcements.controller.js';
+import authMiddleware from '../../middlewares/auth.middleware.js';
+import requireRole from '../../middlewares/role.middleware.js';
+import { validate, createAnnouncementSchema } from '../../utils/validation.js';
+import { validatePagination } from '../../utils/pagination.js';
+
+const router = express.Router();
+const classRouter = express.Router({ mergeParams: true });
 
 // GET /api/announcements — all announcements relevant to the current user
 router.get(
@@ -57,6 +59,6 @@ classRouter.get(
   asyncHandler(listClassAnnouncements)
 );
 
-module.exports = router;
-module.exports.classRouter = classRouter;
+export default router;
+export { classRouter };
 
