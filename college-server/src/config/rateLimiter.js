@@ -15,8 +15,8 @@
  * Logs rate limit violations for monitoring
  */
 
-const rateLimit = require("express-rate-limit");
-const logger = require("./logger");
+import rateLimit from 'express-rate-limit';
+import logger from './logger.js';
 
 /**
  * General API Limiter
@@ -191,7 +191,7 @@ const adminLimiter = rateLimit({
   },
 });
 
-module.exports = {
+export {
   generalLimiter,
   authLimiter,
   uploadLimiter,

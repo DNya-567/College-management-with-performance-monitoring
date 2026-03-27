@@ -1,7 +1,7 @@
 // Pagination utility for handling limit/offset queries
 // Provides consistent pagination across all GET endpoints
 
-const Joi = require('joi');
+import Joi from 'joi';
 
 /**
  * Pagination query schema
@@ -9,7 +9,7 @@ const Joi = require('joi');
  * limit: number of records per page (default 20, max 100)
  * offset: number of records to skip (default 0)
  */
-exports.paginationSchema = Joi.object({
+export const paginationSchema = Joi.object({
   limit: Joi.number()
     .integer()
     .min(1)
@@ -32,8 +32,8 @@ exports.paginationSchema = Joi.object({
  * Middleware to validate and parse pagination parameters
  * Adds validated limit/offset to req.pagination
  */
-exports.validatePagination = (req, res, next) => {
-  const { error, value } = exports.paginationSchema.validate(req.query, {
+export const validatePagination = (req, res, next) => {
+  const { error, value } = paginationSchema.validate(req.query, {
     abortEarly: false,
     stripUnknown: true
   });
@@ -69,7 +69,7 @@ exports.validatePagination = (req, res, next) => {
  * @param {number} offset - Current offset
  * @returns {Object} Formatted response with pagination
  */
-exports.formatPaginatedResponse = (data, total, limit, offset) => {
+export const formatPaginatedResponse = (data, total, limit, offset) => {
   const currentPage = Math.floor(offset / limit) + 1;
   const totalPages = Math.ceil(total / limit);
   const hasNextPage = offset + limit < total;
@@ -97,7 +97,7 @@ exports.formatPaginatedResponse = (data, total, limit, offset) => {
  * @param {number} offset - Current offset
  * @returns {Object} {limitClause, params} for parameterized query
  */
-exports.getLimitOffsetClause = (limit, offset) => {
+export const getLimitOffsetClause = (limit, offset) => {
   return {
     limitClause: 'LIMIT $1 OFFSET $2',
     params: [limit, offset]
@@ -115,7 +115,7 @@ exports.getLimitOffsetClause = (limit, offset) => {
  * @param {Array} dataParams - Parameters for data query
  * @returns {Object} {data, total, limit, offset}
  */
-exports.executePaginatedQuery = async (db, countQuery, dataQuery, countParams, dataParams) => {
+export const executePaginatedQuery = async (db, countQuery, dataQuery, countParams, dataParams) => {
   // Get total count
   const countResult = await db.query(countQuery, countParams);
   const total = parseInt(countResult.rows[0].total, 10);
@@ -128,5 +128,3 @@ exports.executePaginatedQuery = async (db, countQuery, dataQuery, countParams, d
     total
   };
 };
-
-

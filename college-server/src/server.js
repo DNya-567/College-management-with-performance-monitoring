@@ -1,13 +1,17 @@
-const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+import 'dotenv/config';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Setup __dirname for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load & validate all environment variables BEFORE anything else
-const env = require("./config/env");
-
-const app = require("./app");
-const { initializeIndexes } = require("./utils/initializeDb");
-const { gracefulShutdown, stopMetricsMonitoring } = require("./config/db");
-const logger = require("./config/logger");
+import env from './config/env.js';
+import app from './app.js';
+import { initializeIndexes } from './utils/initializeDb.js';
+import { gracefulShutdown, stopMetricsMonitoring } from './config/db.js';
+import logger from './config/logger.js';
 
 let server;
 

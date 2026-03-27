@@ -1,5 +1,5 @@
 # Dependencies
-node_modules/
+college-server/node_modules/
 
 # Environment variables (contains secrets — never commit)
 .env

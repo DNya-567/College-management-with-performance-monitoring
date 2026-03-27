@@ -1,10 +1,11 @@
 // Health check endpoint for monitoring database and server health
 // Used by load balancers, monitoring systems, and health dashboards
 
-const express = require('express');
+import express from 'express';
+import pool, { healthCheck, getPoolStats } from '../config/db.js';
+import logger from '../config/logger.js';
+
 const router = express.Router();
-const db = require('../config/db');
-const logger = require('../config/logger');
 
 /**
  * GET /health
@@ -14,8 +15,8 @@ const logger = require('../config/logger');
  */
 router.get('/', async (req, res) => {
   try {
-    const dbHealth = await db.healthCheck();
-    const poolStats = db.getPoolStats();
+    const dbHealth = await healthCheck();
+    const poolStats = getPoolStats();
 
     // Determine overall status
     const isHealthy = dbHealth.status === 'healthy';
@@ -53,7 +54,7 @@ router.get('/', async (req, res) => {
  */
 router.get('/ready', async (req, res) => {
   try {
-    const dbHealth = await db.healthCheck();
+    const dbHealth = await healthCheck();
     const isReady = dbHealth.status === 'healthy';
 
     return res.status(isReady ? 200 : 503).json({
@@ -83,7 +84,7 @@ router.get('/live', (req, res) => {
  * Admin/monitoring only
  */
 router.get('/pool', (req, res) => {
-  const stats = db.getPoolStats();
+  const stats = getPoolStats();
 
   return res.json({
     timestamp: new Date().toISOString(),
@@ -94,5 +95,4 @@ router.get('/pool', (req, res) => {
   });
 });
 
-module.exports = router;
-
+export default router;

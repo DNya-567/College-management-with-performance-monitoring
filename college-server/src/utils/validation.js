@@ -1,11 +1,11 @@
 // Validation schemas using Joi for all API endpoints
 // Centralized validation to prevent invalid data from reaching database
 
-const Joi = require('joi');
+import Joi from 'joi';
 
 // ─── AUTH SCHEMAS ───────────────────────────────────────────────────────────
 
-exports.loginSchema = Joi.object({
+export const loginSchema = Joi.object({
   email: Joi.string().email().required().messages({
     'string.email': 'Invalid email format',
     'any.required': 'Email is required'
@@ -16,7 +16,7 @@ exports.loginSchema = Joi.object({
   })
 });
 
-exports.registerStudentSchema = Joi.object({
+export const registerStudentSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
   name: Joi.string().min(2).max(100).required(),
@@ -25,25 +25,25 @@ exports.registerStudentSchema = Joi.object({
   department_id: Joi.string().uuid().required()
 });
 
-exports.registerTeacherSchema = Joi.object({
+export const registerTeacherSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
   name: Joi.string().min(2).max(100).required(),
   department_id: Joi.string().uuid().required()
 });
 
-exports.forgotPasswordSchema = Joi.object({
+export const forgotPasswordSchema = Joi.object({
   email: Joi.string().email().required()
 });
 
-exports.resetPasswordSchema = Joi.object({
+export const resetPasswordSchema = Joi.object({
   token: Joi.string().required(),
   newPassword: Joi.string().min(6).required()
 });
 
 // ─── CLASS SCHEMAS ──────────────────────────────────────────────────────────
 
-exports.createClassSchema = Joi.object({
+export const createClassSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
   subject_id: Joi.string().uuid().required(),
   year: Joi.number().integer().min(1).max(4).required()
@@ -51,7 +51,7 @@ exports.createClassSchema = Joi.object({
 
 // ─── MARKS SCHEMAS ─────────────────────────────────────────────────────────
 
-exports.createMarkSchema = Joi.object({
+export const createMarkSchema = Joi.object({
   student_id: Joi.string().uuid().required(),
   subject_id: Joi.string().uuid().required(),
   score: Joi.number().min(0).required(),
@@ -60,7 +60,7 @@ exports.createMarkSchema = Joi.object({
   year: Joi.number().integer().min(1).max(4).required()
 });
 
-exports.updateMarkSchema = Joi.object({
+export const updateMarkSchema = Joi.object({
   score: Joi.number().min(0).required(),
   total_marks: Joi.number().min(0).required(),
   exam_type: Joi.string().valid('Unit Test', 'Midterm', 'Final').required()
@@ -68,7 +68,7 @@ exports.updateMarkSchema = Joi.object({
 
 // ─── ATTENDANCE SCHEMAS ────────────────────────────────────────────────────
 
-exports.markAttendanceSchema = Joi.object({
+export const markAttendanceSchema = Joi.object({
   date: Joi.date().required(),
   records: Joi.array().items(
     Joi.object({
@@ -80,7 +80,7 @@ exports.markAttendanceSchema = Joi.object({
 
 // ─── ANNOUNCEMENT SCHEMAS ──────────────────────────────────────────────────
 
-exports.createAnnouncementSchema = Joi.object({
+export const createAnnouncementSchema = Joi.object({
   title: Joi.string().trim().min(5).max(200).required().messages({
     'string.min': 'Title must be at least 5 characters',
     'string.max': 'Title cannot exceed 200 characters',
@@ -95,17 +95,17 @@ exports.createAnnouncementSchema = Joi.object({
 
 // ─── ENROLLMENT SCHEMAS ────────────────────────────────────────────────────
 
-exports.approveEnrollmentSchema = Joi.object({
+export const approveEnrollmentSchema = Joi.object({
   // No body required, uses URL param
 });
 
-exports.rejectEnrollmentSchema = Joi.object({
+export const rejectEnrollmentSchema = Joi.object({
   // No body required, uses URL param
 });
 
 // ─── SEMESTER SCHEMAS ──────────────────────────────────────────────────────
 
-exports.createSemesterSchema = Joi.object({
+export const createSemesterSchema = Joi.object({
   name: Joi.string().min(3).max(100).required(),
   academic_year: Joi.string().pattern(/^\d{4}-\d{4}$/).required(),
   start_date: Joi.date().required(),
@@ -114,12 +114,12 @@ exports.createSemesterSchema = Joi.object({
 
 // ─── IMPORTS SCHEMAS ───────────────────────────────────────────────────────
 
-exports.bulkImportStudentsSchema = Joi.object({
+export const bulkImportStudentsSchema = Joi.object({
   file: Joi.any().required().messages({
   })
 });
 
-exports.bulkImportMarksSchema = Joi.object({
+export const bulkImportMarksSchema = Joi.object({
   file: Joi.any().required().messages({
     'any.required': 'CSV file is required'
   })
@@ -131,7 +131,7 @@ exports.bulkImportMarksSchema = Joi.object({
  * Returns middleware function that validates req.body against schema
  * Returns 400 if validation fails with detailed error messages
  */
-exports.validate = (schema) => {
+export const validate = (schema) => {
   return (req, res, next) => {
     console.log('=== VALIDATION MIDDLEWARE ===');
     console.log('Request Path:', req.path);
@@ -176,7 +176,7 @@ exports.validate = (schema) => {
 /**
  * Validates query parameters
  */
-exports.validateQuery = (schema) => {
+export const validateQuery = (schema) => {
   return (req, res, next) => {
     const { error, value } = schema.validate(req.query, {
       abortEarly: false,
@@ -203,7 +203,7 @@ exports.validateQuery = (schema) => {
 /**
  * Validates URL parameters
  */
-exports.validateParams = (schema) => {
+export const validateParams = (schema) => {
   return (req, res, next) => {
     const { error, value } = schema.validate(req.params, {
       abortEarly: false,

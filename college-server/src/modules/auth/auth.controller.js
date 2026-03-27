@@ -1,17 +1,17 @@
 // Auth controller: handles login, current-user lookup, and password management.
 // Must NOT define routes or read Authorization headers.
 
-const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const db = require("../../config/db");
-const env = require("../../config/env");
-const logger = require("../../config/logger");
-const { sendEmail } = require("../../utils/email");
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import pool from '../../config/db.js';
+import env from '../../config/env.js';
+import logger from '../../config/logger.js';
+import { sendEmail } from '../../utils/email.js';
 
 // ─── Controllers ──────────────────────────────────────────────────────────────
 
-exports.login = async (req, res) => {
+export const login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -22,7 +22,7 @@ exports.login = async (req, res) => {
   try {
     logger.info('Login attempt', { email, ip: req.ip, correlationId: req.correlationId });
 
-    const result = await db.query(
+    const result = await pool.query(
       "SELECT id, email, role, password_hash, is_active FROM users WHERE email = $1",
       [email]
     );
@@ -78,7 +78,7 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.me = async (req, res) => {
+export const resetPassword = async (req, res) => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -108,7 +108,7 @@ exports.me = async (req, res) => {
   }
 };
 
-exports.registerTeacher = async (req, res) => {
+export const registerHod = async (req, res) => {
   const { name, email, password, department_id } = req.body;
 
   if (!name || !email || !password) {

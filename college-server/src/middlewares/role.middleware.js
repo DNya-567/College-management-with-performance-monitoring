@@ -2,7 +2,7 @@
 // Responsibility: allow only specified roles to access a route
 // Must NOT query the database
 
-module.exports = function requireRole(allowedRoles = []) {
+export default function requireRole(allowedRoles = []) {
   return (req, res, next) => {
     const role = req.user?.role;
 
@@ -12,4 +12,4 @@ module.exports = function requireRole(allowedRoles = []) {
 
     next();
   };
-};
+}
