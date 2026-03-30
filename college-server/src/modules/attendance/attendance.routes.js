@@ -7,7 +7,6 @@ import {
   listAttendanceByDate,
   listMyAttendance,
   listTopAttendance,
-  markAttendance,
   listMyAttendanceRange,
   listStudentAttendanceForClass,
   getAttendanceSummary,
@@ -17,6 +16,9 @@ import requireRole from '../../middlewares/role.middleware.js';
 import { validate, markAttendanceSchema } from '../../utils/validation.js';
 
 const router = express.Router();
+
+// Alias: markAttendance = createAttendance for the POST /attendance endpoint
+const markAttendance = createAttendance;
 
 router.post(
   "/classes/:classId/attendance",

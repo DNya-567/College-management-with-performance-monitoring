@@ -1,8 +1,8 @@
 // Teachers controller: database queries for teacher profiles only.
 // Must NOT define routes or implement auth logic.
-const db = require("../../config/db");
+import db from '../../config/db.js';
 
-exports.getMyProfile = async (req, res) => {
+export const getMyProfile = async (req, res) => {
   const userId = req.user?.userId;
 
   if (!userId) {

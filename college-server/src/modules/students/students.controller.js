@@ -1,11 +1,9 @@
 // Students controller: database CRUD for students only.
 // Must NOT define routes or implement auth logic.
-const db = require("../../config/db");
-const { formatPaginatedResponse, getLimitOffsetClause } = require("../../utils/pagination");
+import db from '../../config/db.js';
+import { formatPaginatedResponse } from '../../utils/pagination.js';
 
-// ...existing code...
-
-exports.listStudents = async (req, res) => {
+export const listStudents = async (req, res) => {
   const role = String(req.user?.role || "").toLowerCase();
   const userId = req.user?.userId;
   const { limit, offset } = req.pagination;
@@ -64,7 +62,7 @@ exports.listStudents = async (req, res) => {
   }
 };
 
-exports.getStudentById = async (req, res) => {
+export const getStudentById = async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -84,7 +82,7 @@ exports.getStudentById = async (req, res) => {
   }
 };
 
-exports.getMyProfile = async (req, res) => {
+export const getMyProfile = async (req, res) => {
   const userId = req.user?.userId;
 
   if (!userId) {

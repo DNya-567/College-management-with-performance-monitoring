@@ -1,8 +1,8 @@
 // Attendance controller: database logic for attendance only.
 // Must NOT define routes or implement auth logic.
-const db = require("../../config/db");
-const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
-const { getActiveSemester } = require("../../utils/getActiveSemester");
+import db from '../../config/db.js';
+import { getTeacherId, getStudentId, getDepartmentId } from '../../utils/lookups.js';
+import { getActiveSemester } from '../../utils/getActiveSemester.js';
 
 const isValidStatus = (status) => status === "present" || status === "absent";
 
@@ -11,7 +11,7 @@ const isSunday = (dateStr) => {
   return d.getDay() === 0;
 };
 
-exports.createAttendance = async (req, res) => {
+export const createAttendance = async (req, res) => {
   const { classId } = req.params;
   const { date, records } = req.body;
   const teacherUserId = req.user?.userId;
@@ -91,70 +91,7 @@ exports.createAttendance = async (req, res) => {
   }
 };
 
-exports.markAttendance = async (req, res) => {
-  const { class_id, student_id, date, status } = req.body;
-  const teacherUserId = req.user?.userId;
-
-  if (!class_id || !student_id || !date || !status) {
-    return res
-      .status(400)
-      .json({ message: "class_id, student_id, date, and status are required." });
-  }
-
-  if (isSunday(date)) {
-    return res.status(400).json({ message: "Attendance cannot be marked on Sundays." });
-  }
-
-  if (!isValidStatus(status)) {
-    return res.status(400).json({ message: "Invalid status value." });
-  }
-
-  if (!teacherUserId) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  try {
-    const teacherId = await getTeacherId(teacherUserId);
-    if (!teacherId) {
-      return res.status(403).json({ message: "Teacher profile not found." });
-    }
-
-    const classRes = await db.query(
-      "SELECT id FROM classes WHERE id = $1 AND teacher_id = $2",
-      [class_id, teacherId]
-    );
-
-    if (classRes.rowCount === 0) {
-      return res.status(403).json({ message: "Class not found for teacher." });
-    }
-
-    const enrollmentRes = await db.query(
-      "SELECT id FROM class_enrollments WHERE class_id = $1 AND student_id = $2 AND status = 'approved'",
-      [class_id, student_id]
-    );
-
-    if (enrollmentRes.rowCount === 0) {
-      return res
-        .status(403)
-        .json({ message: "Student not approved for this class." });
-    }
-
-    const activeSem = await getActiveSemester();
-    const semesterId = activeSem ? activeSem.id : null;
-
-    const result = await db.query(
-      "INSERT INTO attendance (class_id, student_id, date, status, semester_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, class_id, student_id, date, status, semester_id",
-      [class_id, student_id, date, status, semesterId]
-    );
-
-    return res.status(201).json({ attendance: result.rows[0] });
-  } catch (error) {
-    console.error("Mark attendance error:", error);
-    return res.status(500).json({ message: "Internal server error." });
-  }
-};
-
-exports.listAttendanceByDate = async (req, res) => {
+export const listAttendanceByDate = async (req, res) => {
   const { classId } = req.params;
   const { date } = req.query;
   const teacherUserId = req.user?.userId;
@@ -198,7 +135,7 @@ exports.listAttendanceByDate = async (req, res) => {
   }
 };
 
-exports.listMyAttendance = async (req, res) => {
+export const listMyAttendance = async (req, res) => {
   const { classId } = req.params;
   const studentUserId = req.user?.userId;
 
@@ -237,7 +174,7 @@ exports.listMyAttendance = async (req, res) => {
   }
 };
 
-exports.listMyAttendanceRange = async (req, res) => {
+export const listMyAttendanceRange = async (req, res) => {
   const studentUserId = req.user?.userId;
   const { from, to } = req.query;
 
@@ -280,7 +217,7 @@ exports.listMyAttendanceRange = async (req, res) => {
 };
 
 // Teacher: get all attendance records for a specific student in a class the teacher owns.
-exports.listStudentAttendanceForClass = async (req, res) => {
+export const listStudentAttendanceForClass = async (req, res) => {
   const { classId, studentId } = req.params;
   const teacherUserId = req.user?.userId;
 
@@ -320,7 +257,7 @@ exports.listStudentAttendanceForClass = async (req, res) => {
 };
 
 // Returns per-student attendance summary (total, present, absent, rate) for a class.
-exports.getAttendanceSummary = async (req, res) => {
+export const getAttendanceSummary = async (req, res) => {
   const { classId } = req.params;
   const teacherUserId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
@@ -382,7 +319,7 @@ exports.getAttendanceSummary = async (req, res) => {
   }
 };
 
-exports.listTopAttendance = async (req, res) => {
+export const listTopAttendance = async (req, res) => {
   const { classId } = req.params;
   const teacherUserId = req.user?.userId;
 

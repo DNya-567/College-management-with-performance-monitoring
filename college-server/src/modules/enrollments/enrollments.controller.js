@@ -1,11 +1,11 @@
 // Enrollments controller: database logic for class enrollments only.
 // Must NOT define routes or implement auth logic.
-const db = require("../../config/db");
-const logger = require("../../config/logger");
-const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
-const { getActiveSemester } = require("../../utils/getActiveSemester");
+import db from '../../config/db.js';
+import logger from '../../config/logger.js';
+import { getTeacherId, getStudentId, getDepartmentId } from '../../utils/lookups.js';
+import { getActiveSemester } from '../../utils/getActiveSemester.js';
 
-exports.requestEnrollment = async (req, res) => {
+export const requestEnrollment = async (req, res) => {
   const { classId } = req.params;
   const studentUserId = req.user?.userId;
 
@@ -43,7 +43,7 @@ exports.requestEnrollment = async (req, res) => {
   }
 };
 
-exports.listEnrollmentRequests = async (req, res) => {
+export const listEnrollmentRequests = async (req, res) => {
   const userId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
 
@@ -94,7 +94,7 @@ exports.listEnrollmentRequests = async (req, res) => {
   }
 };
 
-exports.approveEnrollment = async (req, res) => {
+export const approveEnrollment = async (req, res) => {
   const { id } = req.params;
   const userId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
@@ -188,7 +188,7 @@ exports.approveEnrollment = async (req, res) => {
   }
 };
 
-exports.rejectEnrollment = async (req, res) => {
+export const rejectEnrollment = async (req, res) => {
   const { id } = req.params;
   const userId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
@@ -282,7 +282,7 @@ exports.rejectEnrollment = async (req, res) => {
   }
 };
 
-exports.listMyClasses = async (req, res) => {
+export const listMyClasses = async (req, res) => {
   const studentUserId = req.user?.userId;
 
   if (!studentUserId) {
@@ -313,7 +313,7 @@ exports.listMyClasses = async (req, res) => {
   }
 };
 
-exports.listMyPendingClasses = async (req, res) => {
+export const listMyPendingClasses = async (req, res) => {
   const studentUserId = req.user?.userId;
 
   if (!studentUserId) {

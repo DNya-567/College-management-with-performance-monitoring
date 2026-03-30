@@ -1,11 +1,11 @@
 // Imports controller: handles CSV bulk import for students and marks.
 // Must NOT define routes or implement auth logic.
 // Validates every row individually — invalid rows are skipped, not fatal.
-const Papa = require("papaparse");
-const bcrypt = require("bcrypt");
-const db = require("../../config/db");
-const { getTeacherId } = require("../../utils/lookups");
-const { getActiveSemester } = require("../../utils/getActiveSemester");
+import Papa from "papaparse";
+import bcrypt from "bcrypt";
+import db from "../../config/db.js";
+import { getTeacherId } from "../../utils/lookups.js";
+import { getActiveSemester } from "../../utils/getActiveSemester.js";
 
 const DEFAULT_PASSWORD = "changeme123";
 
@@ -27,7 +27,7 @@ const parseCSVBuffer = (buffer) => {
 //    Admin only. CSV columns: name, email, roll_no, year, department
 // ════════════════════════════════════════════════════════
 
-exports.importStudents = async (req, res) => {
+export const importStudents = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "CSV file is required." });
   }
@@ -121,7 +121,7 @@ exports.importStudents = async (req, res) => {
 //    Matches students by roll_no in the class. Auto-injects teacher_id and semester_id.
 // ════════════════════════════════════════════════════════
 
-exports.importMarks = async (req, res) => {
+export const importMarks = async (req, res) => {
   const { classId } = req.params;
   const teacherUserId = req.user?.userId;
 
@@ -269,14 +269,14 @@ exports.importMarks = async (req, res) => {
 // 3) DOWNLOAD CSV TEMPLATES
 // ════════════════════════════════════════════════════════
 
-exports.getStudentTemplate = (_req, res) => {
+export const getStudentTemplate = (_req, res) => {
   const csv = "name,email,roll_no,year\nJohn Doe,john@example.com,CS001,1\nJane Smith,jane@example.com,CS002,2";
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", 'attachment; filename="student_import_template.csv"');
   res.send(csv);
 };
 
-exports.getMarksTemplate = (_req, res) => {
+export const getMarksTemplate = (_req, res) => {
   const csv = "roll_no,subject,exam_type,score,total_marks\nCS001,Mathematics,internal,42,50\nCS001,Mathematics,midterm,65,100\nCS002,Physics,final,78,100";
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", 'attachment; filename="marks_import_template.csv"');

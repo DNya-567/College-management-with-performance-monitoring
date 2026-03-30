@@ -1,12 +1,12 @@
 // Marks controller: database CRUD for marks only.
 // Must NOT define routes or implement auth logic.
-const db = require("../../config/db");
-const logger = require("../../config/logger");
-const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
-const { getActiveSemester } = require("../../utils/getActiveSemester");
-const { formatPaginatedResponse } = require("../../utils/pagination");
+import db from '../../config/db.js';
+import logger from '../../config/logger.js';
+import { getTeacherId, getStudentId, getDepartmentId } from '../../utils/lookups.js';
+import { getActiveSemester } from '../../utils/getActiveSemester.js';
+import { formatPaginatedResponse } from '../../utils/pagination.js';
 
-exports.createMark = async (req, res) => {
+export const createMark = async (req, res) => {
   const { student_id, subject_id, score, total_marks, exam_type, year } = req.body;
   const teacherUserId = req.user?.userId;
 
@@ -78,7 +78,7 @@ exports.createMark = async (req, res) => {
   }
 };
 
-exports.listMarks = async (req, res) => {
+export const listMarks = async (req, res) => {
   const role = String(req.user?.role || "").toLowerCase();
   const userId = req.user?.userId;
 
@@ -114,7 +114,7 @@ exports.listMarks = async (req, res) => {
   }
 };
 
-exports.getMarkById = async (req, res) => {
+export const getMarkById = async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -136,7 +136,7 @@ exports.getMarkById = async (req, res) => {
   }
 };
 
-exports.getSubjectDifficulty = async (req, res) => {
+export const getSubjectDifficulty = async (req, res) => {
   const role = String(req.user?.role || "").toLowerCase();
   const userId = req.user?.userId;
 
@@ -179,7 +179,7 @@ exports.getSubjectDifficulty = async (req, res) => {
   }
 };
 
-exports.listMyMarks = async (req, res) => {
+export const listMyMarks = async (req, res) => {
   const userId = req.user?.userId;
   const { semester_id } = req.query;
   const { limit, offset } = req.pagination;
@@ -245,7 +245,7 @@ exports.listMyMarks = async (req, res) => {
   }
 };
 
-exports.updateMark = async (req, res) => {
+export const updateMark = async (req, res) => {
   const { id } = req.params;
   const { score, total_marks } = req.body;
   const teacherUserId = req.user?.userId;
@@ -309,7 +309,7 @@ exports.updateMark = async (req, res) => {
   }
 };
 
-exports.createClassMark = async (req, res) => {
+export const createClassMark = async (req, res) => {
   const { classId } = req.params;
   const { student_id, subject_id, score, total_marks, exam_type, year } = req.body;
   const teacherUserId = req.user?.userId;
@@ -384,7 +384,7 @@ exports.createClassMark = async (req, res) => {
   }
 };
 
-exports.listMarksByClass = async (req, res) => {
+export const listMarksByClass = async (req, res) => {
   const { classId } = req.params;
   const { semester_id } = req.query;
   const teacherUserId = req.user?.userId;
@@ -457,7 +457,7 @@ exports.listMarksByClass = async (req, res) => {
   }
 };
 
-exports.listMyMarksByClass = async (req, res) => {
+export const listMyMarksByClass = async (req, res) => {
   const { classId } = req.params;
   const studentUserId = req.user?.userId;
 

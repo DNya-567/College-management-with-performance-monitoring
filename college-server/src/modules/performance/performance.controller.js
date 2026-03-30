@@ -1,8 +1,8 @@
 // Performance controller: aggregates marks + attendance data for analytics.
 // Must NOT define routes or implement auth logic.
 // Must NOT read Authorization headers — uses req.user set by auth middleware.
-const db = require("../../config/db");
-const { getStudentId, getTeacherId, getDepartmentId } = require("../../utils/lookups");
+import db from "../../config/db.js";
+import { getStudentId, getTeacherId, getDepartmentId } from "../../utils/lookups.js";
 
 /**
  * GET /api/performance/me
@@ -10,7 +10,7 @@ const { getStudentId, getTeacherId, getDepartmentId } = require("../../utils/loo
  *   avg_score (%), attendance_pct, subject_count, rank, total_students,
  *   subjects: [{ name, avg_score, attendance_pct }]
  */
-exports.getMyPerformance = async (req, res) => {
+export const getMyPerformance = async (req, res) => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -137,7 +137,7 @@ exports.getMyPerformance = async (req, res) => {
  * Returns performance of every approved student in a class (teacher view).
  * Each student: { student_id, name, roll_no, avg_score, attendance_pct, rank }
  */
-exports.getClassPerformance = async (req, res) => {
+export const getClassPerformance = async (req, res) => {
   const { classId } = req.params;
   const userId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
@@ -218,7 +218,7 @@ exports.getClassPerformance = async (req, res) => {
  * Response: { trend: [{ exam, percentage }] }
  * percentage = SUM(score) / SUM(total_marks) * 100 grouped by exam_type
  */
-exports.getMyTrend = async (req, res) => {
+export const getMyTrend = async (req, res) => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -265,7 +265,7 @@ exports.getMyTrend = async (req, res) => {
  * Returns per-class performance overview for the HOD's department.
  * Each class: { class_id, class_name, teacher_name, year, avg_score, attendance_pct, student_count }
  */
-exports.getDepartmentPerformance = async (req, res) => {
+export const getDepartmentPerformance = async (req, res) => {
   const userId = req.user?.userId;
 
   if (!userId) {

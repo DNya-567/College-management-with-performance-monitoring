@@ -1,10 +1,10 @@
 // Reports controller: generates PDF report cards.
 // Must NOT define routes or implement auth logic.
 // Streams PDFs directly as HTTP response.
-const PDFDocument = require("pdfkit");
-const db = require("../../config/db");
-const { getStudentId, getTeacherId } = require("../../utils/lookups");
-const { getActiveSemester } = require("../../utils/getActiveSemester");
+import PDFDocument from "pdfkit";
+import db from "../../config/db.js";
+import { getStudentId, getTeacherId } from "../../utils/lookups.js";
+import { getActiveSemester } from "../../utils/getActiveSemester.js";
 
 // ── Helpers ──
 
@@ -31,7 +31,7 @@ const pct = (score, total) => {
  *
  * Streams a PDF with Content-Type: application/pdf.
  */
-exports.generateReportCard = async (req, res) => {
+export const generateReportCard = async (req, res) => {
   const { studentId } = req.params;
   const role = String(req.user?.role || "").toLowerCase();
   const userId = req.user?.userId;

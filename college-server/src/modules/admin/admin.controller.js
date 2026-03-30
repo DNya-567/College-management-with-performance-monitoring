@@ -1,15 +1,17 @@
 // Admin controller: system-wide queries for the admin dashboard.
 // Only admin-role users should reach these functions (enforced by routes).
 // Must NOT define routes, read Authorization headers, or implement auth logic.
-const db = require("../../config/db");
-const bcrypt = require("bcrypt");
-const { logAudit } = require("../../utils/auditLog");
+import db from "../../config/db.js";
+import bcrypt from "bcrypt";
+import { logAudit } from "../../utils/auditLog.js";
+import logger from "../../config/logger.js";
+import { applyIndexes } from "../../utils/indexing.js";
 
 /**
  * GET /api/admin/stats
  * Returns system-wide counts for the dashboard cards.
  */
-exports.getSystemStats = async (_req, res) => {
+export const getSystemStats = async (_req, res) => {
   try {
     const result = await db.query(`
       SELECT
@@ -36,7 +38,7 @@ exports.getSystemStats = async (_req, res) => {
  * GET /api/admin/users?role=teacher|student|hod|admin
  * Lists all users with optional role filter. Joins teacher/student tables for names.
  */
-exports.listAllUsers = async (req, res) => {
+export const listAllUsers = async (req, res) => {
   const { role } = req.query;
 
   try {
@@ -74,7 +76,7 @@ exports.listAllUsers = async (req, res) => {
  * GET /api/admin/classes
  * Lists every class with teacher name, subject name, and enrolled student count.
  */
-exports.listAllClasses = async (_req, res) => {
+export const listAllClasses = async (_req, res) => {
   try {
     const result = await db.query(`
       SELECT
@@ -104,7 +106,7 @@ exports.listAllClasses = async (_req, res) => {
  * GET /api/admin/teachers
  * Lists all teachers with department name and class count.
  */
-exports.listAllTeachers = async (_req, res) => {
+export const listAllTeachers = async (_req, res) => {
   try {
     const result = await db.query(`
       SELECT
@@ -131,7 +133,7 @@ exports.listAllTeachers = async (_req, res) => {
  * GET /api/admin/students
  * Lists all students with enrollment count.
  */
-exports.listAllStudents = async (_req, res) => {
+export const listAllStudents = async (_req, res) => {
   try {
     const result = await db.query(`
       SELECT
@@ -158,7 +160,7 @@ exports.listAllStudents = async (_req, res) => {
  * GET /api/admin/departments
  * Lists all departments with HOD name and teacher count.
  */
-exports.listAllDepartments = async (_req, res) => {
+export const listAllDepartments = async (_req, res) => {
   try {
     const result = await db.query(`
       SELECT
@@ -183,7 +185,7 @@ exports.listAllDepartments = async (_req, res) => {
  * POST /api/admin/departments
  * Creates a new department.
  */
-exports.createDepartment = async (req, res) => {
+export const createDepartment = async (req, res) => {
   const { name } = req.body;
 
   if (!name || !name.trim()) {
@@ -209,7 +211,7 @@ exports.createDepartment = async (req, res) => {
  * PUT /api/admin/departments/:id
  * Updates department name.
  */
-exports.updateDepartment = async (req, res) => {
+export const updateDepartment = async (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
 
@@ -241,7 +243,7 @@ exports.updateDepartment = async (req, res) => {
  * DELETE /api/admin/departments/:id
  * Deletes a department if it has no teachers assigned.
  */
-exports.deleteDepartment = async (req, res) => {
+export const deleteDepartment = async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -280,7 +282,7 @@ exports.deleteDepartment = async (req, res) => {
  * - Updates the teacher's user role to 'hod'
  * - Reverts the previous HOD (if any) back to 'teacher' role
  */
-exports.assignHod = async (req, res) => {
+export const assignHod = async (req, res) => {
   const { id: departmentId } = req.params;
   const { teacher_id } = req.body;
 
@@ -353,7 +355,7 @@ exports.assignHod = async (req, res) => {
  * GET /api/admin/recent-activity
  * Returns the 10 most recent announcements as a proxy for recent activity.
  */
-exports.getRecentActivity = async (_req, res) => {
+export const getRecentActivity = async (_req, res) => {
   try {
     const result = await db.query(`
       SELECT
@@ -384,7 +386,7 @@ exports.getRecentActivity = async (_req, res) => {
  * PUT /api/admin/users/:id/reset-password
  * Admin resets a user's password. Cannot reset own password here.
  */
-exports.resetUserPassword = async (req, res) => {
+export const resetUserPassword = async (req, res) => {
   const { id } = req.params;
   const { password } = req.body;
   const adminId = req.user.userId;
@@ -419,7 +421,7 @@ exports.resetUserPassword = async (req, res) => {
  * PUT /api/admin/users/:id/toggle-status
  * Activate or deactivate a user account. Cannot deactivate self.
  */
-exports.toggleUserStatus = async (req, res) => {
+export const toggleUserStatus = async (req, res) => {
   const { id } = req.params;
   const adminId = req.user.userId;
 
@@ -453,7 +455,7 @@ exports.toggleUserStatus = async (req, res) => {
  * DELETE /api/admin/users/:id
  * Permanently deletes a user and all cascading data. Cannot delete self.
  */
-exports.deleteUser = async (req, res) => {
+export const deleteUser = async (req, res) => {
   const { id } = req.params;
   const adminId = req.user.userId;
 
@@ -522,7 +524,7 @@ exports.deleteUser = async (req, res) => {
  * PUT /api/admin/teachers/:id/department
  * Reassign a teacher to a different department.
  */
-exports.updateTeacherDepartment = async (req, res) => {
+export const updateTeacherDepartment = async (req, res) => {
   const { id } = req.params; // teacher id
   const { department_id } = req.body;
   const adminId = req.user.userId;
@@ -588,7 +590,7 @@ exports.updateTeacherDepartment = async (req, res) => {
  * GET /api/admin/audit-logs
  * Returns recent audit log entries (newest first).
  */
-exports.getAuditLogs = async (req, res) => {
+export const getAuditLogs = async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 200);
 
   try {
@@ -614,10 +616,7 @@ exports.getAuditLogs = async (req, res) => {
  * CRITICAL: Run once on first deployment
  * Safe to run multiple times (indexes have IF NOT EXISTS)
  */
-exports.createIndexes = async (req, res) => {
-  const logger = require("../../config/logger");
-  const { applyIndexes } = require("../../utils/indexing");
-
+export const createIndexes = async (req, res) => {
   try {
     logger.info('Admin triggered database indexing');
     const result = await applyIndexes();
@@ -646,7 +645,7 @@ exports.createIndexes = async (req, res) => {
  * GET /api/admin/indexes/list
  * Lists all existing database indexes
  */
-exports.listIndexes = async (req, res) => {
+export const listIndexes = async (req, res) => {
   try {
     const result = await db.query(`
       SELECT
@@ -673,7 +672,7 @@ exports.listIndexes = async (req, res) => {
  * Returns index usage statistics
  * Shows which indexes are being used and how effective they are
  */
-exports.getIndexStats = async (req, res) => {
+export const getIndexStats = async (req, res) => {
   try {
     const result = await db.query(`
       SELECT

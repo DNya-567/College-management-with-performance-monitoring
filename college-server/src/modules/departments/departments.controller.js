@@ -1,8 +1,9 @@
 // Departments controller: database queries for department lookups only.
 // Must NOT define routes or implement auth logic.
-const db = require("../../config/db");
+import db from "../../config/db.js";
+import logger from "../../config/logger.js";
 
-exports.listDepartments = async (_req, res) => {
+export const listDepartments = async (_req, res) => {
   try {
     const result = await db.query(
       "SELECT id, name FROM departments ORDER BY name ASC"
@@ -18,7 +19,7 @@ exports.listDepartments = async (_req, res) => {
  * GET /api/departments/:departmentId/teachers
  * HOD-only: List all teachers in the department
  */
-exports.getTeachersByDepartment = async (req, res) => {
+export const getTeachersByDepartment = async (req, res) => {
   const { departmentId } = req.params;
 
   if (!departmentId) {
@@ -51,10 +52,9 @@ exports.getTeachersByDepartment = async (req, res) => {
  * GET /api/departments/:departmentId/teacher/:teacherId/performance
  * HOD-only: Get average performance stats for a teacher's classes
  */
-exports.getTeacherPerformance = async (req, res) => {
+export const getTeacherPerformance = async (req, res) => {
   const { departmentId, teacherId } = req.params;
   const { semester_id } = req.query;
-  const logger = require("../../config/logger");
 
   if (!teacherId) {
     return res.status(400).json({ message: "Teacher ID is required." });

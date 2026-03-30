@@ -1,10 +1,10 @@
 // Classes controller: database CRUD for classes only.
 // Must NOT define routes or implement auth logic.
-const db = require("../../config/db");
-const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
-const { formatPaginatedResponse } = require("../../utils/pagination");
+import db from '../../config/db.js';
+import { getTeacherId, getStudentId, getDepartmentId } from '../../utils/lookups.js';
+import { formatPaginatedResponse } from '../../utils/pagination.js';
 
-exports.createClass = async (req, res) => {
+export const createClass = async (req, res) => {
   const { name, subject_id, year } = req.body;
   const teacherUserId = req.user?.userId;
 
@@ -34,7 +34,7 @@ exports.createClass = async (req, res) => {
   }
 };
 
-exports.listMyClasses = async (req, res) => {
+export const listMyClasses = async (req, res) => {
   const teacherUserId = req.user?.userId;
 
   if (!teacherUserId) {
@@ -59,7 +59,7 @@ exports.listMyClasses = async (req, res) => {
   }
 };
 
-exports.listAvailableClasses = async (req, res) => {
+export const listAvailableClasses = async (req, res) => {
   const studentUserId = req.user?.userId;
   const { limit, offset } = req.pagination;
 
@@ -105,7 +105,7 @@ exports.listAvailableClasses = async (req, res) => {
   }
 };
 
-exports.listApprovedStudents = async (req, res) => {
+export const listApprovedStudents = async (req, res) => {
   const { classId } = req.params;
   const userId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
@@ -161,7 +161,7 @@ exports.listApprovedStudents = async (req, res) => {
   }
 };
 
-exports.getDepartmentStats = async (req, res) => {
+export const getDepartmentStats = async (req, res) => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -195,7 +195,7 @@ exports.getDepartmentStats = async (req, res) => {
   }
 };
 
-exports.listDepartmentClasses = async (req, res) => {
+export const listDepartmentClasses = async (req, res) => {
   const userId = req.user?.userId;
 
   if (!userId) {

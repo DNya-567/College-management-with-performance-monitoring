@@ -6,7 +6,7 @@
 import express from 'express';
 import asyncHandler from '../../utils/asyncHandler.js';
 import logger from '../../config/logger.js';
-const {
+import {
   createAnnouncement,
   listClassAnnouncements,
   listMyAnnouncements,

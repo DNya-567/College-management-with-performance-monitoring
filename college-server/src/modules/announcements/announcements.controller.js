@@ -1,16 +1,16 @@
 // Announcements controller: database logic for class-scoped announcements.
 // Announcements are always tied to a specific class.
 // Must NOT define routes or implement auth logic.
-const db = require("../../config/db");
-const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
-const { formatPaginatedResponse } = require("../../utils/pagination");
+import db from "../../config/db.js";
+import { getTeacherId, getStudentId, getDepartmentId } from "../../utils/lookups.js";
+import { formatPaginatedResponse } from "../../utils/pagination.js";
 
 /**
  * POST /api/classes/:classId/announcements
  * Teacher creates an announcement for a class they own.
  * HOD creates an announcement for any class in their department.
  */
-exports.createAnnouncement = async (req, res) => {
+export const createAnnouncement = async (req, res) => {
   const { classId } = req.params;
   const { title, body } = req.body;
   const teacherUserId = req.user?.userId;
@@ -80,7 +80,7 @@ exports.createAnnouncement = async (req, res) => {
  * Teachers see announcements for classes they own.
  * Students see announcements for classes they are approved in.
  */
-exports.listClassAnnouncements = async (req, res) => {
+export const listClassAnnouncements = async (req, res) => {
   const { classId } = req.params;
   const userId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
@@ -153,7 +153,7 @@ exports.listClassAnnouncements = async (req, res) => {
  * - Student: announcements from all classes they are approved in
  * - Admin/HOD: all announcements
  */
-exports.listMyAnnouncements = async (req, res) => {
+export const listMyAnnouncements = async (req, res) => {
   const userId = req.user?.userId;
   const role = String(req.user?.role || "").toLowerCase();
   const { limit, offset } = req.pagination;
