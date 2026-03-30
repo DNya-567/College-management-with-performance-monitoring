@@ -1,10 +1,12 @@
 // Analytics routes: maps HTTP endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
-const router = require("express").Router();
-const asyncHandler = require("../../utils/asyncHandler");
-const { getSubjectDifficulty } = require("../marks/marks.controller");
-const authMiddleware = require("../../middlewares/auth.middleware");
-const requireRole = require("../../middlewares/role.middleware");
+import express from 'express';
+import asyncHandler from '../../utils/asyncHandler.js';
+import { getSubjectDifficulty } from '../marks/marks.controller.js';
+import authMiddleware from '../../middlewares/auth.middleware.js';
+import requireRole from '../../middlewares/role.middleware.js';
+
+const router = express.Router();
 
 router.get(
   "/analytics/subjects/hardest",
@@ -13,4 +15,4 @@ router.get(
   asyncHandler(getSubjectDifficulty)
 );
 
-module.exports = router;
+export default router;

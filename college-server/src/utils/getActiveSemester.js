@@ -1,13 +1,13 @@
 // Utility: returns the currently active semester's ID from the database.
 // Used by controllers to auto-inject semester_id into inserts.
 // Returns null if no active semester is set.
-const db = require("../config/db");
+import db from '../config/db.js';
 
 let cached = null;
 let cachedAt = 0;
 const TTL = 30_000; // 30s cache to reduce DB hits
 
-const getActiveSemester = async () => {
+export const getActiveSemester = async () => {
   const now = Date.now();
   if (cached && now - cachedAt < TTL) return cached;
 
@@ -21,10 +21,9 @@ const getActiveSemester = async () => {
 };
 
 // Call after admin changes the active semester to bust cache immediately
-const bustSemesterCache = () => {
+export const bustSemesterCache = () => {
   cached = null;
   cachedAt = 0;
 };
 
-module.exports = { getActiveSemester, bustSemesterCache };
 

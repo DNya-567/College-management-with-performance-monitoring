@@ -1,7 +1,7 @@
 // Audit log helper — fire-and-forget insert into audit_logs.
 // Used by admin controllers to track actions.
 // Must NOT throw or block the calling function.
-const db = require("../config/db");
+import db from "../config/db.js";
 
 /**
  * @param {string} adminId - UUID of the admin performing the action
@@ -10,7 +10,7 @@ const db = require("../config/db");
  * @param {string} targetId - UUID of the target entity
  * @param {object} details - any extra context (JSON)
  */
-const logAudit = (adminId, action, targetType, targetId, details = {}) => {
+export const logAudit = (adminId, action, targetType, targetId, details = {}) => {
   db.query(
     `INSERT INTO audit_logs (admin_id, action, target_type, target_id, details)
      VALUES ($1, $2, $3, $4, $5)`,
@@ -20,5 +20,4 @@ const logAudit = (adminId, action, targetType, targetId, details = {}) => {
   });
 };
 
-module.exports = { logAudit };
 

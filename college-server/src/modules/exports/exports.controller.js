@@ -1,10 +1,10 @@
 // Exports controller: generates Excel files for marks, attendance, and department performance.
 // Must NOT define routes or implement auth logic.
 // Streams .xlsx directly as HTTP response using exceljs.
-const ExcelJS = require("exceljs");
-const db = require("../../config/db");
-const { getTeacherId, getDepartmentId } = require("../../utils/lookups");
-const { getActiveSemester } = require("../../utils/getActiveSemester");
+import ExcelJS from "exceljs";
+import db from "../../config/db.js";
+import { getTeacherId, getDepartmentId } from "../../utils/lookups.js";
+import { getActiveSemester } from "../../utils/getActiveSemester.js";
 
 // ── Shared helpers ──
 
@@ -42,7 +42,7 @@ const styleHeaderRow = (sheet) => {
 // 1) EXPORT MARKS — GET /api/exports/marks/:classId
 // ════════════════════════════════════════════════════════
 
-exports.exportClassMarks = async (req, res) => {
+export const exportClassMarks = async (req, res) => {
   const { classId } = req.params;
   const teacherUserId = req.user?.userId;
 
@@ -139,7 +139,7 @@ exports.exportClassMarks = async (req, res) => {
 // 2) EXPORT ATTENDANCE — GET /api/exports/attendance/:classId
 // ════════════════════════════════════════════════════════
 
-exports.exportClassAttendance = async (req, res) => {
+export const exportClassAttendance = async (req, res) => {
   const { classId } = req.params;
   const teacherUserId = req.user?.userId;
 
@@ -232,7 +232,7 @@ exports.exportClassAttendance = async (req, res) => {
 //    HOD only: department-wide performance summary
 // ════════════════════════════════════════════════════════
 
-exports.exportDepartmentPerformance = async (req, res) => {
+export const exportDepartmentPerformance = async (req, res) => {
   const { deptId } = req.params;
   const userId = req.user?.userId;
 

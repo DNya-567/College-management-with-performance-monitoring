@@ -2,17 +2,20 @@
 // Run once on deployment to optimize queries for production
 // Safe to run multiple times (indexes have IF NOT EXISTS)
 
-const fs = require('fs');
-const path = require('path');
-const db = require('../config/db');
-const logger = require('../config/logger');
+import fs from 'fs';
+import path from 'path';
+import db from '../config/db.js';
+import logger from '../config/logger.js';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Apply all production indexes to database
  * CRITICAL: Run this once after first deployment
  * Safe for production: Uses CONCURRENTLY flag (no table locks)
  */
-const applyIndexes = async () => {
+export const applyIndexes = async () => {
   try {
     logger.info('Starting database indexing...');
 
@@ -69,7 +72,7 @@ const applyIndexes = async () => {
  * Check which indexes exist in the database
  * Useful for debugging
  */
-const listExistingIndexes = async () => {
+export const listExistingIndexes = async () => {
   try {
     const result = await db.query(`
       SELECT indexname, tablename
@@ -87,7 +90,7 @@ const listExistingIndexes = async () => {
 /**
  * Get index statistics (size, effectiveness)
  */
-const getIndexStats = async () => {
+export const getIndexStats = async () => {
   try {
     const result = await db.query(`
       SELECT
@@ -109,9 +112,4 @@ const getIndexStats = async () => {
   }
 };
 
-module.exports = {
-  applyIndexes,
-  listExistingIndexes,
-  getIndexStats
-};
 

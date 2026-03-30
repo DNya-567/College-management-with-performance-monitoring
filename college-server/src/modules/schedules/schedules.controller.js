@@ -1,7 +1,7 @@
 // Schedules controller: DB logic for class schedules only.
 // Must NOT define routes or implement auth middleware logic.
-const db = require("../../config/db");
-const { getTeacherId, getStudentId, getDepartmentId } = require("../../utils/lookups");
+import db from "../../config/db.js";
+import { getTeacherId, getStudentId, getDepartmentId } from "../../utils/lookups.js";
 
 const VALID_STATUS = new Set(["scheduled", "cancelled", "rescheduled"]);
 
@@ -91,7 +91,7 @@ const hasOverlap = async (classId, sessionDate, startTime, endTime, skipSchedule
 };
 
 // POST /api/classes/:classId/schedules
-exports.createClassSchedule = async (req, res) => {
+export const createClassSchedule = async (req, res) => {
   const { classId } = req.params;
   const { session_date, start_time, end_time, topic } = req.body;
   const userId = req.user?.userId;
@@ -131,7 +131,7 @@ exports.createClassSchedule = async (req, res) => {
 };
 
 // PATCH /api/schedules/:scheduleId
-exports.updateClassSchedule = async (req, res) => {
+export const updateClassSchedule = async (req, res) => {
   const { scheduleId } = req.params;
   const {
     status,
@@ -241,7 +241,7 @@ exports.updateClassSchedule = async (req, res) => {
 };
 
 // GET /api/classes/:classId/schedules
-exports.listClassSchedules = async (req, res) => {
+export const listClassSchedules = async (req, res) => {
   const { classId } = req.params;
   const userId = req.user?.userId;
   const role = normalizeStatus(req.user?.role);
@@ -286,7 +286,7 @@ exports.listClassSchedules = async (req, res) => {
 };
 
 // GET /api/schedules
-exports.listMySchedules = async (req, res) => {
+export const listMySchedules = async (req, res) => {
   const userId = req.user?.userId;
   const role = normalizeStatus(req.user?.role);
 

@@ -27,6 +27,8 @@ import {
   getIndexStats,
 } from './admin.controller.js';
 
+const router = express.Router();
+
 // All admin routes require authentication + admin role
 router.use(authMiddleware, requireRole(["admin"]));
 

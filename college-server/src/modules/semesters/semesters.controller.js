@@ -1,13 +1,13 @@
 // Semesters controller: CRUD + set-active for academic semesters.
 // Must NOT define routes or implement auth logic.
-const db = require("../../config/db");
-const { bustSemesterCache } = require("../../utils/getActiveSemester");
+import db from "../../config/db.js";
+import { bustSemesterCache } from "../../utils/getActiveSemester.js";
 
 /**
  * GET /api/semesters
  * Lists all semesters ordered by start_date DESC.
  */
-exports.listSemesters = async (_req, res) => {
+export const listSemesters = async (_req, res) => {
   try {
     const result = await db.query(
       "SELECT id, name, academic_year, start_date, end_date, is_active, created_at FROM semesters ORDER BY start_date DESC"
@@ -23,7 +23,7 @@ exports.listSemesters = async (_req, res) => {
  * GET /api/semesters/active
  * Returns only the currently active semester.
  */
-exports.getActiveSemester = async (_req, res) => {
+export const getActiveSemester = async (_req, res) => {
   try {
     const result = await db.query(
       "SELECT id, name, academic_year, start_date, end_date, is_active FROM semesters WHERE is_active = true LIMIT 1"
@@ -39,7 +39,7 @@ exports.getActiveSemester = async (_req, res) => {
  * POST /api/semesters
  * Creates a new semester. Admin only.
  */
-exports.createSemester = async (req, res) => {
+export const createSemester = async (req, res) => {
   const { name, academic_year, start_date, end_date } = req.body;
 
   if (!name || !academic_year || !start_date || !end_date) {
@@ -68,7 +68,7 @@ exports.createSemester = async (req, res) => {
  * PUT /api/semesters/:id
  * Updates a semester. Admin only.
  */
-exports.updateSemester = async (req, res) => {
+export const updateSemester = async (req, res) => {
   const { id } = req.params;
   const { name, academic_year, start_date, end_date } = req.body;
 
@@ -100,7 +100,7 @@ exports.updateSemester = async (req, res) => {
  * DELETE /api/semesters/:id
  * Deletes a semester. Cannot delete the active one.
  */
-exports.deleteSemester = async (req, res) => {
+export const deleteSemester = async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -124,7 +124,7 @@ exports.deleteSemester = async (req, res) => {
  * PUT /api/semesters/:id/activate
  * Sets this semester as active, deactivates all others (transaction).
  */
-exports.setActiveSemester = async (req, res) => {
+export const setActiveSemester = async (req, res) => {
   const { id } = req.params;
 
   try {

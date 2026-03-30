@@ -1,8 +1,8 @@
 // Subjects controller: database CRUD for subjects only.
 // Must NOT define routes or implement auth logic.
-const db = require("../../config/db");
+import db from '../../config/db.js';
 
-exports.createSubject = async (req, res) => {
+export const createSubject = async (req, res) => {
   const { name } = req.body;
 
   if (!name || !String(name).trim()) {
@@ -22,7 +22,7 @@ exports.createSubject = async (req, res) => {
   }
 };
 
-exports.listSubjects = async (req, res) => {
+export const listSubjects = async (req, res) => {
   const role = String(req.user?.role || "").toLowerCase();
   const userId = req.user?.userId;
 
@@ -63,7 +63,7 @@ exports.listSubjects = async (req, res) => {
   }
 };
 
-exports.getSubjectById = async (req, res) => {
+export const getSubjectById = async (req, res) => {
   const { id } = req.params;
 
   try {
