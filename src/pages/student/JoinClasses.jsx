@@ -28,7 +28,7 @@ const JoinClasses = () => {
   const loadClasses = async () => {
     try {
       const [classesRes, pendingRes] = await Promise.all([
-        http.get("/classes/available"),
+        http.get("/classes"),
         listPendingEnrollments(),
       ]);
       setClasses(classesRes.data?.data || []);
@@ -46,7 +46,7 @@ const JoinClasses = () => {
     const load = async () => {
       try {
         const [classesRes, pendingRes] = await Promise.all([
-          http.get("/classes/available"),
+          http.get("/classes"),
           listPendingEnrollments(),
         ]);
         if (isMounted) {
