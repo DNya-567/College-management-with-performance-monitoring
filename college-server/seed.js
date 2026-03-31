@@ -8,11 +8,11 @@
  *
  * Creates:
  * - 1 admin user (email: admin@college.com)
- * - 4 departments with HODs (teachers with hod role)
+ * - 8 departments with HODs (teachers with hod role)
  * - 2 semesters (1 past, 1 active)
- * - 8 teachers (2 per department)
- * - 16 classes (2 per teacher)
- * - 160 students (10 per class)
+ * - 16 teachers (2 per department)
+ * - 32 classes (2 per teacher)
+ * - 320 students (10 per class)
  * - Enrollments, attendance, marks, announcements, and schedules for all
  */
 
@@ -36,7 +36,7 @@ const pool = new Pool({
 // Seed data sizes
 const SEED_CONFIG = {
   admins: 1,
-  departments: 4,
+  departments: 8,
   semesters: 2,
   teachersPerDept: 2,
   classesPerTeacher: 2,
@@ -192,6 +192,10 @@ async function seedDepartments() {
     "Mechanical Engineering",
     "Electrical Engineering",
     "Civil Engineering",
+    "Information Technology",
+    "Electronics & Communication",
+    "Chemical Engineering",
+    "Biomedical Engineering",
   ];
 
   for (const name of departmentNames) {
