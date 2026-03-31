@@ -1,7 +1,7 @@
--- Comprehensive Index Creation Script
+-- Migration: Create comprehensive database indexes for all tables
+-- Date: 2026-03-15
 -- Purpose: Ensure ALL critical indexes are created for optimal performance
--- Date: March 15, 2026
--- This script is idempotent (safe to run multiple times)
+-- Note: This script is idempotent (safe to run multiple times)
 
 BEGIN;
 

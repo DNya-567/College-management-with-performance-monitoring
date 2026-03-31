@@ -1,6 +1,7 @@
 -- Migration: Create password_reset_tokens table
--- Used for the forgot-password / email OTP reset flow.
--- Tokens are stored as SHA-256 hashes (never raw) and expire after 15 minutes.
+-- Date: 2026-03-13
+-- Purpose: Store hashed password reset tokens for forgot-password flow
+-- Details: Tokens are SHA-256 hashes (never raw) and expire after 15 minutes
 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
   id         SERIAL PRIMARY KEY,
@@ -11,9 +12,8 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index for fast lookup by hashed token
-CREATE INDEX IF NOT EXISTS idx_prt_token_hash ON password_reset_tokens(token_hash);
-
--- Index for cleanup queries (expire old tokens per user)
-CREATE INDEX IF NOT EXISTS idx_prt_user_id ON password_reset_tokens(user_id);
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token_hash ON password_reset_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
 
