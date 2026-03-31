@@ -36,7 +36,8 @@ import healthRoutes from './routes/health.routes.js';
 
 const app = express();
 
-// ── Security headers (XSS, clickjacking, MIME-sniffing protection) ──
+// ── Trust proxy headers from Railway/load balancer ──
+app.set('trust proxy', 1);
 app.use(helmet());
 
 // ── Correlation ID for request tracing ──
