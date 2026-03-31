@@ -42,6 +42,7 @@ const Login = () => {
     email: "",
     password: "",
     year: "",
+    department_id: "",
   });
   const [studentStatus, setStudentStatus] = useState("");
   const [studentError, setStudentError] = useState("");
@@ -245,9 +246,10 @@ const Login = () => {
         email: studentForm.email,
         password: studentForm.password,
         year: Number(studentForm.year),
+        department_id: studentForm.department_id,
       });
       setStudentStatus("Student registered. Please sign in.");
-      setStudentForm({ name: "", roll_no: "", email: "", password: "", year: "" });
+      setStudentForm({ name: "", roll_no: "", email: "", password: "", year: "", department_id: "" });
       setMode("login");
     } catch (err) {
       setStudentError(err.response?.data?.message || "Student registration failed.");
@@ -566,10 +568,25 @@ const Login = () => {
                     <option value="4">Fourth Year</option>
                   </select>
                 </div>
+                <div className="reg-field space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="stu-dept">Department</label>
+                  <select
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm transition focus:border-[#0052FF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0052FF]/10"
+                    id="stu-dept"
+                    value={studentForm.department_id}
+                    onChange={(e) => setStudentForm({ ...studentForm, department_id: e.target.value })}
+                    required
+                  >
+                    <option value="">Select department</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   type="submit"
                   className="reg-field w-full rounded-full bg-[#0052FF] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-600 hover:shadow-lg active:scale-[0.98] disabled:opacity-60"
-                  disabled={loading}
+                  disabled={loading || !studentForm.department_id}
                 >
                   Create Student Account
                 </button>
