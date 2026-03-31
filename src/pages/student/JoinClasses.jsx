@@ -28,10 +28,10 @@ const JoinClasses = () => {
   const loadClasses = async () => {
     try {
       const [classesRes, pendingRes] = await Promise.all([
-        http.get("/classes"),
+        http.get("/classes/available"),
         listPendingEnrollments(),
       ]);
-      setClasses(classesRes.data?.classes || []);
+      setClasses(classesRes.data?.data || []);
       setPending(pendingRes.data?.classes || []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load classes.");
@@ -46,11 +46,11 @@ const JoinClasses = () => {
     const load = async () => {
       try {
         const [classesRes, pendingRes] = await Promise.all([
-          http.get("/classes"),
+          http.get("/classes/available"),
           listPendingEnrollments(),
         ]);
         if (isMounted) {
-          setClasses(classesRes.data?.classes || []);
+          setClasses(classesRes.data?.data || []);
           setPending(pendingRes.data?.classes || []);
         }
       } catch (err) {
