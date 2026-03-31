@@ -1,4 +1,4 @@
-// Classes routes: maps HTTP endpoints to controller functions.
+// Classes routes: maps HTTP wreewrf endpoints to controller functions.
 // Must NOT include SQL, auth logic, or business logic.
 import express from 'express';
 import asyncHandler from '../../utils/asyncHandler.js';
