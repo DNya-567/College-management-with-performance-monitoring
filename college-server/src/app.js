@@ -115,6 +115,14 @@ app.get("/", (_req, res) => {
   });
 });
 
+// ── Debug CORS route (temporary) ──
+app.get("/api/debug-cors", (_req, res) => {
+  res.json({
+    cors_origins: process.env.CORS_ORIGINS,
+    node_env: process.env.NODE_ENV
+  });
+});
+
 // ── Route mounts ──
 app.use("/api/auth", authRoutes);
 app.use("/api", marksRoutes);
