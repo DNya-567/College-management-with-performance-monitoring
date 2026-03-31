@@ -1,18 +1,22 @@
--- Create semesters table and add semester_id to marks, attendance, class_enrollments
--- Run via: node src/scripts/runMigration.js sql/2026_03_04_create_semesters.sql
+-- Migration: Create semesters table and add semester_id to related tables
+-- Date: 2026-03-04
+-- Purpose: Support academic semester tracking across all entities
 
--- 1) Semesters table
+-- 1) Create semesters table
 CREATE TABLE IF NOT EXISTS semesters (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   academic_year TEXT NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
-  is_active BOOLEAN DEFAULT false,
-  created_at TIMESTAMP DEFAULT now()
+  is_active BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_semesters_is_active ON semesters(is_active);
+-- Create indexes
+CREATE UNIQUE INDEX IF NOT EXISTS idx_semesters_active ON semesters(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_semesters_academic_year ON semesters(academic_year);
 
 -- 2) Add semester_id FK to marks (nullable so existing rows survive)
 ALTER TABLE marks ADD COLUMN IF NOT EXISTS semester_id UUID REFERENCES semesters(id) ON DELETE SET NULL;

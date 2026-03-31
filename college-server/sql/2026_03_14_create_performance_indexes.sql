@@ -1,7 +1,7 @@
--- Database Indexes for College Management System
+-- Migration: Create comprehensive performance indexes
+-- Date: 2026-03-14
 -- Purpose: Optimize query performance for production scale (1000+ users)
 -- Strategy: B-tree indexes on FK columns, frequently queried columns, and composite indexes
--- File Created: March 14, 2026
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. FOREIGN KEY INDEXES (Critical - All lookups)
