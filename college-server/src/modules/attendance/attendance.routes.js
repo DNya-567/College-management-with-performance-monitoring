@@ -17,9 +17,6 @@ import { validate, markAttendanceSchema } from '../../utils/validation.js';
 
 const router = express.Router();
 
-// Alias: markAttendance = createAttendance for the POST /attendance endpoint
-const markAttendance = createAttendance;
-
 router.post(
   "/classes/:classId/attendance",
   authMiddleware,
@@ -61,7 +58,7 @@ router.post(
   "/attendance",
   authMiddleware,
   requireRole(["teacher", "admin"]),
-  asyncHandler(markAttendance)
+  asyncHandler(createAttendance)
 );
 router.get(
   "/attendance/me",
