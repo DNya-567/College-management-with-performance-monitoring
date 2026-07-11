@@ -25,13 +25,18 @@ const { Pool } = require("pg");
 // CONFIG & SETUP
 // ──────────────────────────────────────────────
 
-const pool = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  port: Number(process.env.DB_PORT) || 5432,
-  user: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD || "dnyanesh",
-  database: process.env.DB_NAME || "college_db",
-});
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    })
+  : new Pool({
+      host: process.env.DB_HOST || "localhost",
+      port: Number(process.env.DB_PORT) || 5432,
+      user: process.env.DB_USER || "postgres",
+      password: process.env.DB_PASSWORD || "dnyanesh",
+      database: process.env.DB_NAME || "college_db",
+    });
 
 // Seed data sizes
 const SEED_CONFIG = {
@@ -502,7 +507,7 @@ async function seedMarks(classes, students, teachers, activeSemester, subjects) 
   console.log("🌱 Seeding marks...");
 
   let markCount = 0;
-  const examTypes = ["internal", "midterm", "final"];
+  const examTypes = ["Unit Test", "Midterm", "Final"];
 
   for (const cls of classes) {
     const classStudents = students.filter((s) => s.class_id === cls.id);
@@ -544,39 +549,58 @@ async function seedAttendance(classes, students, activeSemester) {
   console.log("🌱 Seeding attendance...");
 
   let attendanceCount = 0;
-  const startDate = new Date(2025, 6, 1); // Jul 1, 2025
-  const endDate = new Date(2025, 7, 31); // Aug 31, 2025
+  const startDate = new Date(2025, 6, 1);
+  const endDate = new Date(2025, 7, 31);
+  const BATCH_SIZE = 200;
+
+  let batch = [];
+  const seenKeys = new Set();
+
+  async function flushBatch() {
+    if (batch.length === 0) return;
+    const valuesSql = batch
+      .map((_, i) => {
+        const base = i * 5;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+      })
+      .join(", ");
+    const params = batch.flat();
+    await query(
+      `INSERT INTO attendance (class_id, student_id, semester_id, date, status)
+       VALUES ${valuesSql}
+       ON CONFLICT (class_id, student_id, date) DO UPDATE SET status = EXCLUDED.status`,
+      params
+    );
+    attendanceCount += batch.length;
+    batch = [];
+  }
 
   for (const cls of classes) {
     const classStudents = students.filter((s) => s.class_id === cls.id);
 
-    // Generate 40 attendance records per class
     for (let i = 0; i < 40; i++) {
       const attDate = randomDate(startDate, endDate);
-      // Skip Sundays
-      if (attDate.getDay() === 0) {
-        continue;
-      }
+      if (attDate.getDay() === 0) continue;
+      const dateStr = formatDate(attDate);
 
       for (const student of classStudents) {
-        // 80% present, 20% absent
+        const key = `${cls.id}|${student.id}|${dateStr}`;
+        if (seenKeys.has(key)) continue;
+        seenKeys.add(key);
+
         const status = Math.random() < 0.8 ? "present" : "absent";
+        batch.push([cls.id, student.id, activeSemester.id, dateStr, status]);
 
-        await query(
-          `INSERT INTO attendance (class_id, student_id, semester_id, date, status)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (class_id, student_id, date) DO UPDATE SET status = $5`,
-          [cls.id, student.id, activeSemester.id, formatDate(attDate), status]
-        );
-
-        attendanceCount++;
+        if (batch.length >= BATCH_SIZE) {
+          await flushBatch();
+        }
       }
     }
   }
 
+  await flushBatch();
   console.log(`  ✓ Created ${attendanceCount} attendance records`);
 }
-
 async function seedAnnouncements(classes, teachers) {
   console.log("🌱 Seeding announcements...");
 
@@ -815,7 +839,7 @@ async function seedHODMarks(hodClasses, hodStudents, hodTeacher, activeSemester,
   console.log("🌱 Seeding HOD class marks...");
 
   let markCount = 0;
-  const examTypes = ["internal", "midterm", "final"];
+  const examTypes = ["Unit Test", "Midterm", "Final"];
 
   for (const cls of hodClasses) {
     const classStudents = hodStudents.filter((s) => s.class_id === cls.id);
@@ -858,39 +882,58 @@ async function seedHODAttendance(hodClasses, hodStudents, activeSemester) {
   console.log("🌱 Seeding HOD class attendance...");
 
   let attendanceCount = 0;
-  const startDate = new Date(2025, 6, 1); // Jul 1, 2025
-  const endDate = new Date(2025, 8, 30); // Sep 30, 2025
+  const startDate = new Date(2025, 6, 1);
+  const endDate = new Date(2025, 8, 30);
+  const BATCH_SIZE = 200;
+
+  let batch = [];
+  const seenKeys = new Set();
+
+  async function flushBatch() {
+    if (batch.length === 0) return;
+    const valuesSql = batch
+      .map((_, i) => {
+        const base = i * 5;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+      })
+      .join(", ");
+    const params = batch.flat();
+    await query(
+      `INSERT INTO attendance (class_id, student_id, semester_id, date, status)
+       VALUES ${valuesSql}
+       ON CONFLICT (class_id, student_id, date) DO UPDATE SET status = EXCLUDED.status`,
+      params
+    );
+    attendanceCount += batch.length;
+    batch = [];
+  }
 
   for (const cls of hodClasses) {
     const classStudents = hodStudents.filter((s) => s.class_id === cls.id);
 
-    // Generate 30 attendance records per class
     for (let i = 0; i < 30; i++) {
       const attDate = randomDate(startDate, endDate);
-      // Skip Sundays
-      if (attDate.getDay() === 0) {
-        continue;
-      }
+      if (attDate.getDay() === 0) continue;
+      const dateStr = formatDate(attDate);
 
       for (const student of classStudents) {
-        // 85% present for HOD demo
+        const key = `${cls.id}|${student.id}|${dateStr}`;
+        if (seenKeys.has(key)) continue;
+        seenKeys.add(key);
+
         const status = Math.random() < 0.85 ? "present" : "absent";
+        batch.push([cls.id, student.id, activeSemester.id, dateStr, status]);
 
-        await query(
-          `INSERT INTO attendance (class_id, student_id, semester_id, date, status)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (class_id, student_id, date) DO UPDATE SET status = $5`,
-          [cls.id, student.id, activeSemester.id, formatDate(attDate), status]
-        );
-
-        attendanceCount++;
+        if (batch.length >= BATCH_SIZE) {
+          await flushBatch();
+        }
       }
     }
   }
 
+  await flushBatch();
   console.log(`  ✓ Created ${attendanceCount} HOD class attendance records`);
 }
-
 // ──────────────────────────────────────────────
 // MAIN SEED FUNCTION
 // ──────────────────────────────────────────────
